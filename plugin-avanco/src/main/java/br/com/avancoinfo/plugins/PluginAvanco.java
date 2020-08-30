@@ -30,6 +30,13 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
     @Autowired
     public PluginAvanco(EventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
+        try {
+            PrintStream stream = new PrintStream(new FileOutputStream("avanco.log", true));
+            stream.println("====================PluginAvanco " + new Date());
+            stream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -39,6 +46,13 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         eventPublisher.register(this);
+        try {
+            PrintStream stream = new PrintStream(new FileOutputStream("avanco.log", true));
+            stream.println("====================afterPropertiesSet " + new Date());
+            stream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /** hhj9677
@@ -48,64 +62,69 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
     @Override
     public void destroy() throws Exception {
         eventPublisher.unregister(this);
+        try {
+            PrintStream stream = new PrintStream(new FileOutputStream("avanco.log", true));
+            stream.println("====================destroy " + new Date());
+            stream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @EventListener
     public void onIssueEvent(IssueEvent issueEvent) {
 
-		try {
+        try {
 
-		PrintStream stream = new PrintStream(new FileOutputStream("avanco.log", true));
-		stream.println("====================evento recebido " + new Date());
+            PrintStream stream = new PrintStream(new FileOutputStream("avanco.log", true));
+            stream.println("====================evento recebido " + new Date());
 
-        Long eventTypeId = issueEvent.getEventTypeId();
-        stream.println("type: " + eventTypeId);
+            Long eventTypeId = issueEvent.getEventTypeId();
+            stream.println("type: " + eventTypeId);
 
-        Issue issue = issueEvent.getIssue();
-        stream.println("getAssigneeId : " + issue.getAssigneeId());
-        stream.println("getDescription: " + issue.getDescription());
+            Issue issue = issueEvent.getIssue();
+            stream.println("getAssigneeId : " + issue.getAssigneeId());
+            stream.println("getDescription: " + issue.getDescription());
 
-		if (issue.getStatus() != null) {
-        	stream.println("status: " + issue.getStatus().getName());
-        	stream.println("status: " + issue.getStatus().getDescription());
-        	stream.println("status: " + issue.getStatus().getSequence());
-		}
+            if (issue.getStatus() != null) {
+                stream.println("status: " + issue.getStatus().getName());
+                stream.println("status: " + issue.getStatus().getDescription());
+                stream.println("status: " + issue.getStatus().getSequence());
+            }
 
-		JiraAuthenticationContext jiraAuthenticationContext = ComponentAccessor.getJiraAuthenticationContext();
-		com.atlassian.jira.user.ApplicationUser user = jiraAuthenticationContext.getUser();
-        stream.println("user: " + user.getName());
+            JiraAuthenticationContext jiraAuthenticationContext = ComponentAccessor.getJiraAuthenticationContext();
+            com.atlassian.jira.user.ApplicationUser user = jiraAuthenticationContext.getUser();
+            stream.println("user: " + user.getName());
 
-		WorklogManager worklogManager = ComponentAccessor.getComponent(WorklogManager.class);
-		List<Worklog> workLogs = worklogManager.getByIssue(issue);
+            WorklogManager worklogManager = ComponentAccessor.getComponent(WorklogManager.class);
+            List<Worklog> workLogs = worklogManager.getByIssue(issue);
 
-		if (workLogs != null) {
-        	stream.println("numlogs: " + workLogs.size());
-			for (Worklog work : workLogs) {
-        		stream.println("autor : " + work.getAuthor());
-        		stream.println("inicio: " + work.getStartDate());
-        		stream.println("tempo : " + work.getTimeSpent());
-        		stream.println("tipo  : " + work.getClass().getName());
-			}
-			//worklogManager.create(user, work, (long) 1800, false);
-		}
+            if (workLogs != null) {
+                stream.println("numlogs: " + workLogs.size());
+                for (Worklog work : workLogs) {
+                    stream.println("autor : " + work.getAuthor());
+                    stream.println("inicio: " + work.getStartDate());
+                    stream.println("tempo : " + work.getTimeSpent());
+                    stream.println("tipo  : " + work.getClass().getName());
+                }
+                //worklogManager.create(user, work, (long) 1800, false);
+            }
 
-		/*
-        if (eventTypeId.equals(EventType.ISSUE_CREATED_ID)) {
-            log.info("Issue {} has been created at {}.", issue.getKey(), issue.getCreated());
-        } else if (eventTypeId.equals(EventType.ISSUE_RESOLVED_ID)) {
-            log.info("Issue {} has been resolved at {}.", issue.getKey(), issue.getResolutionDate());
-        } else if (eventTypeId.equals(EventType.ISSUE_CLOSED_ID)) {
-            log.info("Issue {} has been closed at {}.", issue.getKey(), issue.getUpdated());
+/*
+            if (eventTypeId.equals(EventType.ISSUE_CREATED_ID)) {
+                log.info("Issue {} has been created at {}.", issue.getKey(), issue.getCreated());
+            } else if (eventTypeId.equals(EventType.ISSUE_RESOLVED_ID)) {
+                log.info("Issue {} has been resolved at {}.", issue.getKey(), issue.getResolutionDate());
+            } else if (eventTypeId.equals(EventType.ISSUE_CLOSED_ID)) {
+                log.info("Issue {} has been closed at {}.", issue.getKey(), issue.getUpdated());
+            }
+*/
+
+            stream.println();
+            stream.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-		*/
-
-		stream.println();
-		stream.close();
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
     }
-
 }
