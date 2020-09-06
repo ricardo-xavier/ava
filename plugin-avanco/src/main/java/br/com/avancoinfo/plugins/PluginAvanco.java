@@ -173,6 +173,20 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                 return;
             }
 
+            Trabalho trabalho = BancoDados.getTrabalho(log, conn, issue.getAssigneeId());
+            if (trabalho == null) {
+                //TODO ainda nao tem trabalho aberto, verifica o status e adiciona o trabalho se for o caso
+            } else {
+
+                if (trabalho.getIssue().equals(issue.getKey())) {
+                    //TODO finalizar o trabalho
+
+                } else {
+
+                    //TODO trabalho aberto em outra issue
+                }
+            }
+
             /*
             Long projectId = issue.getProjectId();
             log.println("projectId: " + projectId);
@@ -200,16 +214,11 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
             */
 
 /*
-            log.println("teste1");
             for (GenericValue value : issueManager.getProjectIssues(issue.getProject())) {
-            log.println("teste2");
                 if (value instanceof Issue) {
-            log.println("teste3");
                     Issue aux = (Issue) value;
-            log.println("teste4");
                 }
             }
-            log.println("teste5");
 
                 try {
                     List<Issue> issues = issueManager.getIssueObjectsByEntity("Assignee", (GenericValue) issue.getAssignee());
