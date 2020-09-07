@@ -41,11 +41,11 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 
     @JiraImport
     private final EventPublisher eventPublisher;
-    private String usuarios="*";
-    private String listaStatus="*";
+    private Configuracao cfg;
 
     @Autowired
     public PluginAvanco(EventPublisher eventPublisher) {
+
         this.eventPublisher = eventPublisher;
         PrintStream log = null;
         try {
@@ -55,6 +55,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
     }
 
     /**
@@ -72,25 +73,13 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
             log = new PrintStream(new FileOutputStream("avanco.log", true));
             log.println("====================afterPropertiesSet " + new Date());
 
-            // carrega a configuracao
-            BufferedReader cfg = new BufferedReader(new FileReader("/u/atlassian/jira/plugin-avanco.cfg"));
-            String linha;
-            while ((linha = cfg.readLine()) != null) {
-                if (linha.startsWith("usuarios=")) {
-                    usuarios = linha.substring(9) + ":";
-                }
-                if (linha.startsWith("status=")) {
-                    listaStatus = linha.substring(7) + ":";
-                }
-            }
-            cfg.close();
-            log.println("usuarios: " + usuarios);
+            cfg = new Configuracao();
+            cfg.carrega(log);
 
         } catch (Exception e) {
             if (log != null) {
                 e.printStackTrace(log);
             }
-            e.printStackTrace();
 
         } finally {
             if (log != null) {
@@ -99,12 +88,13 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         }
     }
 
-    /** hhj9677
+    /** 
      * Called when the plugin is being disabled or removed.
      * @throws Exception
      */
     @Override
     public void destroy() throws Exception {
+
         eventPublisher.unregister(this);
         try {
             PrintStream log = new PrintStream(new FileOutputStream("avanco.log", true));
@@ -113,16 +103,17 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
     }
 
 	private WorklogNewEstimateInputParameters createParams(MutableIssue issue, String timeSpent, Date StartDate) {
 		return WorklogInputParametersImpl.issue(issue).startDate(StartDate).timeSpent(timeSpent)
-				.comment("Tempo iniciado pelo plugin avanço: " + timeSpent + ".").buildNewEstimate();
+				.comment(cfg.getMensagemInicio()).buildNewEstimate();
 	}
 
 	private WorklogNewEstimateInputParameters updateParams(MutableIssue issue, String timeSpent, Date StartDate, Long worklogId) {
 		return WorklogInputParametersImpl.issue(issue).worklogId(worklogId).startDate(StartDate).timeSpent(timeSpent)
-				.comment("Tempo registrado pelo plugin avanço: " + timeSpent + ".").buildNewEstimate();
+				.comment(cfg.getMensagemFim()).buildNewEstimate();
 	}
 
     @EventListener
@@ -136,43 +127,42 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
             log.println("====================evento recebido " + new Date());
 
             Long eventTypeId = issueEvent.getEventTypeId();
-            log.println("type: " + eventTypeId);
 
-            if ((eventTypeId == EventType.ISSUE_WORKLOGGED_ID)
-                || (eventTypeId == EventType.ISSUE_WORKSTARTED_ID)
-                || (eventTypeId == EventType.ISSUE_WORKSTOPPED_ID)
-                || (eventTypeId == EventType.ISSUE_COMMENT_EDITED_ID)
-                || (eventTypeId == EventType.ISSUE_WORKLOG_UPDATED_ID)
-                || (eventTypeId == EventType.ISSUE_WORKLOG_DELETED_ID)
-                || (eventTypeId == EventType.ISSUE_COMMENT_DELETED_ID)) {
+            Issue issue = issueEvent.getIssue();
+            if (issue == null) {
                 log.close();
                 return;
             }
-
-            Issue issue = issueEvent.getIssue();
-            log.println("getId         : " + issue.getId());
-            log.println("getKey        : " + issue.getKey());
-            log.println("getNumber     : " + issue.getNumber());
-            log.println("getAssigneeId : " + issue.getAssigneeId());
 
             Status status = issue.getStatusObject();
             if (status == null) {
                 log.close();
                 return;
             }
-            log.println("status Id  : " + status.getId());
-            log.println("status Name: " + status.getName());
-            log.println("status Desc: " + status.getDescription());
 
+            log.printf("evento=%d %s issue=%s status=%s %s usuario=%s%n",
+                eventTypeId, Evento.toString(eventTypeId), issue.getKey(),
+                status.getId(), status.getName(), issue.getAssigneeId());
+            
+            // verifica se o usuario esta configurado para o plugin
+            if (!cfg.getListaUsuarios().equals("*") && !cfg.getListaUsuarios().contains(issue.getAssigneeId()+":")) {
+                log.println("Usuario nao configurado: " + issue.getAssigneeId());
+                log.close();
+                return;
+            }
+
+            // verifica se o usuario logado eh responsavel pela issue
             JiraAuthenticationContext jiraAuthenticationContext = ComponentAccessor.getJiraAuthenticationContext();
             com.atlassian.jira.user.ApplicationUser user = null;
             if (jiraAuthenticationContext != null) {
                 user = jiraAuthenticationContext.getUser();
                 if (user == null) {
+                    log.println("Erro getUser");
                     log.close();
                     return;
                 }
                 if (!user.getName().equals(issue.getAssigneeId())) {
+                    log.printf("Usuario logado %s diferente do responsavel %s%n", user.getName(), issue.getAssigneeId());
                     log.close();
                     return;
                 }
@@ -180,66 +170,91 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 
             IssueManager issueManager = ComponentAccessor.getComponent(IssueManager.class);
             if (issueManager == null) {
+                log.println("Erro IssueManager");
                 log.close();
                 return;
             }
 
             WorklogManager worklogManager = ComponentAccessor.getComponent(WorklogManager.class);
             if (worklogManager == null) {
-                log.close();
-                return;
-            }
-
-            //TODO testar tipo de evento
-
-            Worklog alterar = null;
-            List<Worklog> workLogs = worklogManager.getByIssue(issue);
-            if (workLogs != null) {
-                for (Worklog work : workLogs) {
-                    if ((work.getComment() != null) && (work.getComment().startsWith("Tempo iniciado"))
-                        && (work.getTimeSpent() == 60)) {
-                        alterar = work;
-                    }
-                    log.println("workId: " + work.getId());
-                    log.println("autor : " + work.getAuthor());
-                    log.println("key   : " + work.getAuthorKey());
-                    log.println("inicio: " + work.getStartDate());
-                    log.println("tempo : " + work.getTimeSpent());
-                    log.println("group : " + work.getGroupLevel());
-                    log.println("level : " + work.getRoleLevelId());
-                    log.println("tipo  : " + work.getClass().getName());
-                }
-            }
-            
-            if (!usuarios.equals("*") && !usuarios.contains(issue.getAssigneeId()+":")) {
+                log.println("Erro WorklogManager");
                 log.close();
                 return;
             }
 
             WorklogService worklogService = (WorklogService) ComponentAccessor.getComponent(WorklogService.class);
             if (worklogService == null) {
+                log.println("Erro WorklogService");
                 log.close();
                 return;
             }
 
 		    JiraServiceContext context = new JiraServiceContextImpl(user);
+            if (context == null) {
+                log.println("Erro JiraServiceContext");
+                log.close();
+                return;
+            }
 
-            if (alterar == null) {
-		        WorklogNewEstimateInputParameters params = createParams((MutableIssue) issue, "1m", new Date());
-                WorklogResult result = worklogService.validateCreate(context, params);
-		        Worklog wl = worklogService.createAndAutoAdjustRemainingEstimate(context, result, true);
-                worklogManager.create(user, wl, null, false);
-            } else {
-                Date inicio = alterar.getStartDate();
+            // verifica se tem algum registro iniciado pelo plugin na issue
+            Worklog registroIniciado = null;
+            List<Worklog> workLogs = worklogManager.getByIssue(issue);
+            if (workLogs != null) {
+                for (Worklog work : workLogs) {
+                    if ((work.getComment() != null) && (work.getComment().contains(cfg.getMensagemInicio()))) {
+                        registroIniciado = work;
+                        log.println("registro iniciado: " + registroIniciado.getStartDate());
+                        break;
+                    }
+                }
+            }
+
+            // verifica se o evento pode iniciar um registro
+            if (cfg.getListaEventosInicio().contains(String.valueOf(eventTypeId)+":")) {
+                // verifica se o status pode iniciar um registro
+                if (cfg.getListaStatusInicio().contains(status.getId()+":")) {
+                    // verifica se ja tem um registro iniciado
+                    if (registroIniciado != null) {
+                        log.println("Ja existe um registro iniciado nessa issue");
+                        log.close();
+                        return;
+                    }
+                    // inicia o registro
+                    log.println("Iniciando registro: " + new Date());
+                    log.close();
+		            WorklogNewEstimateInputParameters params = createParams((MutableIssue) issue, "1m", new Date());
+                    WorklogResult result = worklogService.validateCreate(context, params);
+		            Worklog wl = worklogService.createAndAutoAdjustRemainingEstimate(context, result, true);
+                    worklogManager.create(user, wl, null, false);
+                    return;
+                }
+            }
+
+            // verifica se o evento pode finalizar um registro
+            if (cfg.getListaEventosFim().contains(String.valueOf(eventTypeId)+":")) {
+                // verifica se tem um registro iniciado
+                if (registroIniciado == null) {
+                    log.println("Nenhum registro iniciado nessa issue");
+                    log.close();
+                    return;
+                }
+                // finaliza o registro
+                Date inicio = registroIniciado.getStartDate();
                 long dif = new Date().getTime() - inicio.getTime();
                 long difMin = dif / 1000 / 60;
-		        WorklogNewEstimateInputParameters params = updateParams((MutableIssue) issue, difMin + "m", inicio, alterar.getId());
+                log.println("Finalizando registro:" + difMin + "m " + new Date());
+                log.close();
+		        WorklogNewEstimateInputParameters params = updateParams((MutableIssue) issue, difMin + "m", inicio, 
+                    registroIniciado.getId());
                 WorklogResult result = worklogService.validateUpdate(context, params);
 		        Worklog wl = worklogService.updateAndAutoAdjustRemainingEstimate(context, result, true);
                 worklogManager.update(user, wl, null, false);
+                return;
             }
 
-            log.println();
+            log.println("Evento nao configurado: " + eventTypeId);
+            log.close();
+            return;
 
         } catch (Exception e) {
             if (log != null) {
@@ -256,24 +271,6 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 
 }
 /*
-		    System.out.println(EventType.ISSUE_CREATED_ID); // 1 
-		    System.out.println(EventType.ISSUE_UPDATED_ID); // 2
-		    System.out.println(EventType.ISSUE_ASSIGNED_ID);  // 3
-		    System.out.println(EventType.ISSUE_RESOLVED_ID); // 4
-		    System.out.println(EventType.ISSUE_CLOSED_ID); // 5
-		    System.out.println(EventType.ISSUE_COMMENTED_ID); // 6
-		    System.out.println(EventType.ISSUE_REOPENED_ID); // 7
-		    System.out.println(EventType.ISSUE_DELETED_ID); // 8
-		    System.out.println(EventType.ISSUE_MOVED_ID); // 9
-		    System.out.println(EventType.ISSUE_WORKLOGGED_ID); // 10
-		    System.out.println(EventType.ISSUE_WORKSTARTED_ID); // 11
-		    System.out.println(EventType.ISSUE_WORKSTOPPED_ID); // 12
-		    System.out.println(EventType.ISSUE_GENERICEVENT_ID); // 13
-		    System.out.println(EventType.ISSUE_COMMENT_EDITED_ID); // 14
-		    System.out.println(EventType.ISSUE_WORKLOG_UPDATED_ID); // 15
-		    System.out.println(EventType.ISSUE_WORKLOG_DELETED_ID); // 16
-		    System.out.println(EventType.ISSUE_COMMENT_DELETED_ID); // 17
-
             1       Aberta
             3       Execução
             4       Detalhar Atividades
