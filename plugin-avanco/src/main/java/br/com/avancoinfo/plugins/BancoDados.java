@@ -47,15 +47,15 @@ public class BancoDados {
 			throws ClassNotFoundException, SQLException {
 
 		String driver = "org.postgresql.Driver";
-		if (DEBUG) {
+		if (DEBUG && (log != null)) {
 			log.println("forName: " + driver);
 		}
 		Class.forName(driver);
-		if (DEBUG) {
+		if (DEBUG && (log != null)) {
 			log.println("getConnection: " + url);
 		}
 		Connection conn = DriverManager.getConnection(url, usuario, senha);
-		if (DEBUG) {
+		if (DEBUG && (log != null)) {
 			log.println("conectado: " + usuario);
 		}
 		return conn;
@@ -101,8 +101,13 @@ public class BancoDados {
 			stmt = conn.createStatement();
 			stmt.execute(sql);
 		} catch (SQLException e) {
-			e.printStackTrace(log);
 		}
+		
+
+		//FIXME
+		sql = "delete from ava_trabalho";
+		stmt = conn.createStatement();
+		stmt.execute(sql);
 
 	}
 
@@ -126,6 +131,30 @@ public class BancoDados {
 
 	}
 
+	public static void carregaStatus(PrintStream log, Connection conn, String[] pares) throws SQLException {
+
+		if (DEBUG) {
+			log.println("carregaStatus");
+		}
+
+		String sql = "delete from ava_status";
+		Statement stmt = conn.createStatement();
+		stmt.execute(sql);
+
+		sql = "insert into ava_status values(?, ?)";
+		PreparedStatement pStmt = conn.prepareStatement(sql);
+		for (String par : pares) {
+			String[] partes = par.split("=");
+			if (partes.length == 2) {
+				pStmt.setInt(1, Integer.parseInt(partes[0]));
+				pStmt.setString(2, partes[1]);
+				pStmt.executeUpdate();
+			}
+		}
+		pStmt.close();
+
+	}
+
 	public static boolean usuarioAtivo(PrintStream log, Connection conn, String usuario) throws SQLException {
 
 		String sql = String.format("select ativo from ava_usuarios where usuario='%s'", usuario.trim());
@@ -143,6 +172,21 @@ public class BancoDados {
 			log.println("usuarioAtivo: " + usuario + " " + ativo);
 		}
 		return ativo;
+	}
+
+	public static boolean statusRegistra(PrintStream log, Connection conn, int status) throws SQLException {
+
+		String sql = String.format("select descricao from ava_status where status=%d", status);
+		Statement stmt = conn.createStatement();
+		ResultSet cursor = stmt.executeQuery(sql);
+
+		boolean registra = cursor.next();
+		cursor.close();
+		stmt.close();
+		if (DEBUG) {
+			log.println("statusRegistra: " + status + " " + registra);
+		}
+		return registra;
 	}
 
 	public static Trabalho getTrabalho(PrintStream log, Connection conn, String usuario) throws SQLException {
@@ -185,32 +229,41 @@ public class BancoDados {
 			log.println("iniciaTrabalho: " + usuario + " " + issue + " " + status);
 		}
 
-		String sql = "insert into ava_trabalho values(?, 'S', ?, ?, ?, null)";
+		String sql = "insert into ava_trabalho values(?, ?, ?, 'S', ?, null)";
 		PreparedStatement pStmt = conn.prepareStatement(sql);
 		pStmt.setString(1, usuario.trim());
 		pStmt.setString(2, issue.trim());
-		pStmt.setInt(3, status);
-		pStmt.setTimestamp(4, new java.sql.Timestamp(new Date().getTime()));
+		pStmt.setTimestamp(3, new java.sql.Timestamp(new Date().getTime()));
+		pStmt.setInt(4, status);
+		
 		pStmt.executeUpdate();
 		pStmt.close();
 
 	}
 
-	public static void finalizaTrabalho(PrintStream log, Connection conn, String usuario, String issue, int status)
+	public static long finalizaTrabalho(PrintStream log, Connection conn, String usuario, Trabalho trabalho)
 			throws SQLException {
 
 		if (DEBUG) {
-			log.println("finalizaTrabalho: " + usuario + " " + issue + " " + status);
+			log.println("finalizaTrabalho: " + usuario + " " + trabalho.getIssue() + " " + trabalho.getInicio());
 		}
 
-		String sql = "update ava_trabalho set aberto='N', fim=? where usuario=? and aberto='S'";
+		String sql = "update ava_trabalho set aberto='N', fim=? where usuario=? and issue=? and inicio=?";
 		PreparedStatement pStmt = conn.prepareStatement(sql);
+		pStmt.setTimestamp(1, new java.sql.Timestamp(new Date().getTime()));
 		pStmt.setString(2, usuario.trim());
-		pStmt.setString(2, issue.trim());
-		pStmt.setInt(3, status);
-		pStmt.setTimestamp(4, new java.sql.Timestamp(new Date().getTime()));
+		pStmt.setString(3, trabalho.getIssue().trim());
+		pStmt.setTimestamp(4, trabalho.getInicio());
+		
 		pStmt.executeUpdate();
 		pStmt.close();
+		
+		long milliseconds1 = trabalho.getInicio().getTime();
+		long milliseconds2 = new Date().getTime();
+
+		long diff = milliseconds2 - milliseconds1;
+		long diffMinutes = diff / (60 * 1000);
+		return diffMinutes;
 
 	}
 

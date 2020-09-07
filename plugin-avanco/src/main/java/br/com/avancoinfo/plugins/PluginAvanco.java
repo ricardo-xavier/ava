@@ -5,6 +5,7 @@ import com.atlassian.event.api.EventPublisher;
 import com.atlassian.jira.event.issue.IssueEvent;
 import com.atlassian.jira.event.type.EventType;
 import com.atlassian.jira.issue.Issue;
+import com.atlassian.jira.issue.MutableIssue;
 import com.atlassian.jira.issue.IssueManager;
 import com.atlassian.plugin.spring.scanner.annotation.imports.JiraImport;
 import org.springframework.beans.factory.DisposableBean;
@@ -15,6 +16,7 @@ import com.atlassian.jira.component.ComponentAccessor;
 import com.atlassian.jira.issue.status.Status;
 import com.atlassian.jira.issue.worklog.Worklog;
 import com.atlassian.jira.issue.worklog.WorklogManager;
+import com.atlassian.jira.issue.worklog.WorklogImpl;
 import com.atlassian.jira.user.ApplicationUser;
 import com.atlassian.jira.security.JiraAuthenticationContext;
 import org.ofbiz.core.entity.GenericValue;
@@ -27,7 +29,12 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
-import java.sql.Connection;
+import com.atlassian.jira.bc.issue.worklog.WorklogService;
+import com.atlassian.jira.bc.issue.worklog.WorklogResult;
+import com.atlassian.jira.bc.issue.worklog.WorklogInputParametersImpl;
+import com.atlassian.jira.bc.issue.worklog.WorklogNewEstimateInputParameters;
+import com.atlassian.jira.bc.JiraServiceContext;
+import com.atlassian.jira.bc.JiraServiceContextImpl;
 
 @Component
 public class PluginAvanco implements InitializingBean, DisposableBean {
@@ -59,7 +66,6 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 
         eventPublisher.register(this);
         PrintStream log = null;
-        Connection conn = null;
 
         try {
 
@@ -71,20 +77,14 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
             String linha;
             while ((linha = cfg.readLine()) != null) {
                 if (linha.startsWith("usuarios=")) {
-                    usuarios = linha.substring(9);
+                    usuarios = linha.substring(9) + ":";
                 }
                 if (linha.startsWith("status=")) {
-                    listaStatus = linha.substring(7);
+                    listaStatus = linha.substring(7) + ":";
                 }
             }
             cfg.close();
             log.println("usuarios: " + usuarios);
-
-            conn = BancoDados.conecta(log);
-            // cria as tabelas que ainda nao existem
-            BancoDados.criaTabelas(log, conn);
-            // inicializa a tabela de usuarios com pelo cfg
-            BancoDados.carregaUsuarios(log, conn, usuarios.split(":"));
 
         } catch (Exception e) {
             if (log != null) {
@@ -95,9 +95,6 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         } finally {
             if (log != null) {
                 log.close();
-            }
-            if (conn != null) {
-                conn.close();
             }
         }
     }
@@ -118,11 +115,20 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         }
     }
 
+	private WorklogNewEstimateInputParameters createParams(MutableIssue issue, String timeSpent, Date StartDate) {
+		return WorklogInputParametersImpl.issue(issue).startDate(StartDate).timeSpent(timeSpent)
+				.comment("Tempo iniciado pelo plugin avanço: " + timeSpent + ".").buildNewEstimate();
+	}
+
+	private WorklogNewEstimateInputParameters updateParams(MutableIssue issue, String timeSpent, Date StartDate, Long worklogId) {
+		return WorklogInputParametersImpl.issue(issue).worklogId(worklogId).startDate(StartDate).timeSpent(timeSpent)
+				.comment("Tempo registrado pelo plugin avanço: " + timeSpent + ".").buildNewEstimate();
+	}
+
     @EventListener
     public void onIssueEvent(IssueEvent issueEvent) {
 
         PrintStream log = null;
-        Connection conn = null;
 
         try {
 
@@ -132,6 +138,17 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
             Long eventTypeId = issueEvent.getEventTypeId();
             log.println("type: " + eventTypeId);
 
+            if ((eventTypeId == EventType.ISSUE_WORKLOGGED_ID)
+                || (eventTypeId == EventType.ISSUE_WORKSTARTED_ID)
+                || (eventTypeId == EventType.ISSUE_WORKSTOPPED_ID)
+                || (eventTypeId == EventType.ISSUE_COMMENT_EDITED_ID)
+                || (eventTypeId == EventType.ISSUE_WORKLOG_UPDATED_ID)
+                || (eventTypeId == EventType.ISSUE_WORKLOG_DELETED_ID)
+                || (eventTypeId == EventType.ISSUE_COMMENT_DELETED_ID)) {
+                log.close();
+                return;
+            }
+
             Issue issue = issueEvent.getIssue();
             log.println("getId         : " + issue.getId());
             log.println("getKey        : " + issue.getKey());
@@ -139,16 +156,23 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
             log.println("getAssigneeId : " + issue.getAssigneeId());
 
             Status status = issue.getStatusObject();
-            if (status != null) {
-                log.println("status Id  : " + status.getId());
-                log.println("status Name: " + status.getName());
-                log.println("status Desc: " + status.getDescription());
+            if (status == null) {
+                log.close();
+                return;
             }
+            log.println("status Id  : " + status.getId());
+            log.println("status Name: " + status.getName());
+            log.println("status Desc: " + status.getDescription());
 
             JiraAuthenticationContext jiraAuthenticationContext = ComponentAccessor.getJiraAuthenticationContext();
+            com.atlassian.jira.user.ApplicationUser user = null;
             if (jiraAuthenticationContext != null) {
-                com.atlassian.jira.user.ApplicationUser user = jiraAuthenticationContext.getUser();
-                if ((user != null) && (user.getName() != null) && !user.getName().equals(issue.getAssigneeId())) {
+                user = jiraAuthenticationContext.getUser();
+                if (user == null) {
+                    log.close();
+                    return;
+                }
+                if (!user.getName().equals(issue.getAssigneeId())) {
                     log.close();
                     return;
                 }
@@ -166,102 +190,54 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                 return;
             }
 
-            conn = BancoDados.conecta(log);
-            if (!BancoDados.usuarioAtivo(log, conn, issue.getAssigneeId())) {
+            //TODO testar tipo de evento
+
+            Worklog alterar = null;
+            List<Worklog> workLogs = worklogManager.getByIssue(issue);
+            if (workLogs != null) {
+                for (Worklog work : workLogs) {
+                    if ((work.getComment() != null) && (work.getComment().startsWith("Tempo iniciado"))
+                        && (work.getTimeSpent() == 60)) {
+                        alterar = work;
+                    }
+                    log.println("workId: " + work.getId());
+                    log.println("autor : " + work.getAuthor());
+                    log.println("key   : " + work.getAuthorKey());
+                    log.println("inicio: " + work.getStartDate());
+                    log.println("tempo : " + work.getTimeSpent());
+                    log.println("group : " + work.getGroupLevel());
+                    log.println("level : " + work.getRoleLevelId());
+                    log.println("tipo  : " + work.getClass().getName());
+                }
+            }
+            
+            if (!usuarios.equals("*") && !usuarios.contains(issue.getAssigneeId()+":")) {
                 log.close();
-                conn.close();
                 return;
             }
 
-            Trabalho trabalho = BancoDados.getTrabalho(log, conn, issue.getAssigneeId());
-            if (trabalho == null) {
-                //TODO ainda nao tem trabalho aberto, verifica o status e adiciona o trabalho se for o caso
+            WorklogService worklogService = (WorklogService) ComponentAccessor.getComponent(WorklogService.class);
+            if (worklogService == null) {
+                log.close();
+                return;
+            }
+
+		    JiraServiceContext context = new JiraServiceContextImpl(user);
+
+            if (alterar == null) {
+		        WorklogNewEstimateInputParameters params = createParams((MutableIssue) issue, "1m", new Date());
+                WorklogResult result = worklogService.validateCreate(context, params);
+		        Worklog wl = worklogService.createAndAutoAdjustRemainingEstimate(context, result, true);
+                worklogManager.create(user, wl, null, false);
             } else {
-
-                if (trabalho.getIssue().equals(issue.getKey())) {
-                    //TODO finalizar o trabalho
-
-                } else {
-
-                    //TODO trabalho aberto em outra issue
-                }
+                Date inicio = alterar.getStartDate();
+                long dif = new Date().getTime() - inicio.getTime();
+                long difMin = dif / 1000 / 60;
+		        WorklogNewEstimateInputParameters params = updateParams((MutableIssue) issue, difMin + "m", inicio, alterar.getId());
+                WorklogResult result = worklogService.validateUpdate(context, params);
+		        Worklog wl = worklogService.updateAndAutoAdjustRemainingEstimate(context, result, true);
+                worklogManager.update(user, wl, null, false);
             }
-
-            /*
-            Long projectId = issue.getProjectId();
-            log.println("projectId: " + projectId);
-
-            Long n = issueManager.getIssueCountForProject(projectId);
-            log.println("count: " + n);
-
-            Collection<Long> ids = issueManager.getIssueIdsForProject(projectId);
-            List<Issue> issues = issueManager.getIssueObjects(ids);
-            if (issues != null) {
-                for (Issue aux : issues) {
-                    log.println("aux: " + aux.getKey());
-                    List<Worklog> workLogs = worklogManager.getByIssue(aux);
-                    if (workLogs != null) {
-                        for (Worklog work : workLogs) {
-                            log.println("workId: " + work.getId());
-                            log.println("autor : " + work.getAuthor());
-                            log.println("inicio: " + work.getStartDate());
-                            log.println("tempo : " + work.getTimeSpent());
-                            log.println("tipo  : " + work.getClass().getName());
-                        }
-                    }
-                }
-            }
-            */
-
-/*
-            for (GenericValue value : issueManager.getProjectIssues(issue.getProject())) {
-                if (value instanceof Issue) {
-                    Issue aux = (Issue) value;
-                }
-            }
-
-                try {
-                    List<Issue> issues = issueManager.getIssueObjectsByEntity("Assignee", (GenericValue) issue.getAssignee());
-                    log.println("ok: " + issues.size());
-                } catch (Exception e) {
-                    log.println("erro: " + e.getMessage());
-                }
-                for (GenericValue value : manager.getProjectIssues(issue.getProject())) {
-                    if (value instanceof Issue) {
-                        Issue aux = (Issue) value;
-                        log.println("aux: " + aux.getKey());
-                    }
-                }
-            }
-*/
-
-/*
-            WorklogManager worklogManager = ComponentAccessor.getComponent(WorklogManager.class);
-            List<Worklog> workLogs = worklogManager.getByIssue(issue);
-
-            if (workLogs != null) {
-                log.println("numlogs: " + workLogs.size());
-                //Worklog w = new WorklogImpl(worklogManager, issue, projectId, null, null, null, null, projectId, projectId);
-                for (Worklog work : workLogs) {
-                    log.println("workId: " + work.getId());
-                    log.println("autor : " + work.getAuthor());
-                    log.println("inicio: " + work.getStartDate());
-                    log.println("tempo : " + work.getTimeSpent());
-                    log.println("tipo  : " + work.getClass().getName());
-                }
-                //worklogManager.create(user, work, (long) 1800, false);
-            }
-*/
-
-/*
-            if (eventTypeId.equals(EventType.ISSUE_CREATED_ID)) {
-                log.info("Issue {} has been created at {}.", issue.getKey(), issue.getCreated());
-            } else if (eventTypeId.equals(EventType.ISSUE_RESOLVED_ID)) {
-                log.info("Issue {} has been resolved at {}.", issue.getKey(), issue.getResolutionDate());
-            } else if (eventTypeId.equals(EventType.ISSUE_CLOSED_ID)) {
-                log.info("Issue {} has been closed at {}.", issue.getKey(), issue.getUpdated());
-            }
-*/
 
             log.println();
 
@@ -274,12 +250,6 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         } finally {
             if (log != null) {
                 log.close();
-            }
-            if (conn != null) {
-                try {
-                    conn.close();
-                } catch (Exception ex) {
-                }
             }
         }
     }
