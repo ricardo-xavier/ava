@@ -33,16 +33,16 @@ public class Configuracao {
         		continue;
         	}
             if (linha.startsWith("usuarios=")) {
-                listaUsuarios = linha.substring(p+1).trim() + ":";
+                listaUsuarios = ":" + linha.substring(p+1).trim() + ":";
                 
             } else if (linha.startsWith("eventos_inicio=")) {
-                listaEventosInicio = linha.substring(p+1).trim() + ":";
+                listaEventosInicio = ":" + linha.substring(p+1).trim() + ":";
                 
             } else if (linha.startsWith("status_inicio=")) {
-                listaStatusInicio = linha.substring(p+1).trim() + ":";
+                listaStatusInicio = ":" + linha.substring(p+1).trim() + ":";
                 
             } else if (linha.startsWith("eventos_fim=")) {
-                listaEventosFim = linha.substring(p+1).trim() + ":";
+                listaEventosFim = ":" + linha.substring(p+1).trim() + ":";
                 
             } else if (linha.startsWith("mensagem_inicio=")) {
                 mensagemInicio = linha.substring(p+1).trim();
