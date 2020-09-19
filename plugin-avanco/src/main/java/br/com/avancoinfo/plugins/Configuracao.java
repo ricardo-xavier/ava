@@ -91,8 +91,8 @@ public class Configuracao {
             } else if (linha.startsWith("mensagem_fim=")) {
                 mensagemFim = linha.substring(p+1).trim();
                 
-            } else if (linha.startsWith("turno=")) {
-                String turno = linha.substring(p+1).trim();
+            } else if (linha.startsWith("turno")) {
+                String turno = linha.trim();
                 turnos.add(turno);
                 
             } else if (linha.startsWith("feriados=")) {
