@@ -261,7 +261,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                 // finaliza o registro
 
                 cfg.carregaTurno(user.getName());
-                long difMin = CalculoTempo.calculaTempo(
+                long difMin = CalculoTempo.calculaTempo(log,
                     registroIniciado.getStartDate(), new Date(),
                     cfg.getIniManha(), cfg.getFimManha(),
                     cfg.getIniTarde(), cfg.getFimTarde(),
@@ -271,7 +271,6 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                 log.printf ("        turno : %s %s %s %s%n",
                     cfg.getIniManha(), cfg.getFimManha(),
                     cfg.getIniTarde(), cfg.getFimTarde());
-                log.println("        feriad:" + cfg.getFeriados());
 
                 Date inicio = registroIniciado.getStartDate();
                 /*

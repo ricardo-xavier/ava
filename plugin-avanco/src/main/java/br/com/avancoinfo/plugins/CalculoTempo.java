@@ -1,5 +1,7 @@
 package com.example.tutorial.plugins;
 
+import java.io.PrintStream;
+
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -56,7 +58,7 @@ public class CalculoTempo {
 		return almoco + calculaTempo(h1, h2);
 	}
 	
-	public static int calculaTempo(Date d1, Date d2, 
+	public static int calculaTempo(PrintStream log, Date d1, Date d2, 
 			String iniManha, String fimManha, String iniTarde, String fimTarde,
 			String feriados) {
 		
@@ -107,19 +109,23 @@ public class CalculoTempo {
 				if (mesmoDia(cal, d2)) {
 					// inicio e fim no mesmo dia
 					minutos += calculaTempo(h1, h2, iniManha, fimManha, iniTarde, fimTarde);
+                    log.println("            " + cal.getTime() + " " + h1 + " " + h2 + " " + minutos);
 					break;
 				} else {
 					minutos += calculaTempo(h1, fimTarde, iniManha, fimManha, iniTarde, fimTarde);
+                    log.println("            " + cal.getTime() + " " + h1 + " " + fimTarde + " " + minutos);
 				}
 				
 			} else {
 				if (mesmoDia(cal, d2)) {
 					// dia final
 					minutos += calculaTempo(iniManha, h2, iniManha, fimManha, iniTarde, fimTarde);
+                    log.println("            " + cal.getTime() + " " + iniManha + " " + h2 + " " + minutos);
 					break;
 				} else {
 					// dia intermediario
 					minutos += calculaTempo(iniManha, fimTarde, iniManha, fimManha, iniTarde, fimTarde);
+                    log.println("            " + cal.getTime() + " " + iniManha + " " + fimTarde + " " + minutos);
 				}
 			}
 			
