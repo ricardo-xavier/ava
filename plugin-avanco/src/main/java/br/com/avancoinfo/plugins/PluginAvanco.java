@@ -157,7 +157,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                 status.getId(), status.getName(), issue.getAssigneeId(), user.getName());
             
             // verifica se o usuario esta configurado para o plugin
-            if (!cfg.getListaUsuarios().equals("*") && !cfg.getListaUsuarios().contains(":"+user.getName()+":")) {
+            if (!cfg.getListaUsuarios().equals("*") && !cfg.getListaUsuarios().contains(":"+user.getName()+"(")) {
                 log.println("Usuario nao configurado: " + user.getName());
                 log.close();
                 return;
@@ -259,9 +259,25 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                 }
 
                 // finaliza o registro
+
+                cfg.carregaTurno(user.getName());
+                long difMin = CalculoTempo.calculaTempo(
+                    registroIniciado.getStartDate(), new Date(),
+                    cfg.getIniManha(), cfg.getFimManha(),
+                    cfg.getIniTarde(), cfg.getFimTarde(),
+                    cfg.getFeriados());
+                log.println("        inicio:" + registroIniciado.getStartDate());
+                log.println("        fim   :" + new Date());
+                log.printf ("        turno : %s %s %s %s%n",
+                    cfg.getIniManha(), cfg.getFimManha(),
+                    cfg.getIniTarde(), cfg.getFimTarde());
+                log.println("        feriad:" + cfg.getFeriados());
+
                 Date inicio = registroIniciado.getStartDate();
+                /*
                 long dif = new Date().getTime() - inicio.getTime();
                 long difMin = dif / 1000 / 60;
+                */
                 log.println("Finalizando registro:" + difMin + "m " + new Date());
                 log.close();
                 WorklogNewEstimateInputParameters params = updateParams((MutableIssue) issue, difMin + "m", inicio, 
@@ -324,3 +340,4 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 */
 
 // 1.1 - 14/09 - finalizar o evento se o usuario com o worklog aberto for o usuario logado
+// 1.2 - 19/09 - alteracao no calculo de tempo, considerando turnos e dias uteis
