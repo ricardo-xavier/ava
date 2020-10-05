@@ -52,16 +52,27 @@ public class IntegralApi {
         		return new ResponseEntity<>("COBCPY nao definida", HttpStatus.INTERNAL_SERVER_ERROR);
         	}
         	
-        	String cpy = cobCpy + "/" + programa.toUpperCase() + ".CPY";
-    		File fCpy = new File(cpy);
-        	if (!fCpy.exists()) {
-        		return new ResponseEntity<>("Configuracao nao encontrada: " + cpy, HttpStatus.INTERNAL_SERVER_ERROR);
+        	File fCpy = null;
+        	String[] cpys = cobCpy.split(":");
+        	for (String dir : cpys) {
+        		String cpy = dir + "/" + programa.toUpperCase() + ".CPY";
+        		fCpy = new File(cpy);
+        		if (fCpy.exists()) {
+        			break;
+        		}
+        		fCpy = null;
+        	}
+        	if (fCpy == null) {
+        		return new ResponseEntity<>("Configuracao nao encontrada: " + programa.toUpperCase() + ".CPY", HttpStatus.INTERNAL_SERVER_ERROR);
         	}
         	
         	List<String> formatacao = new ArrayList<String>();
         	BufferedReader reader = new BufferedReader(new FileReader(fCpy));
         	String linha;
         	while ((linha = reader.readLine()) != null) {
+            	if (dbg > 1) {
+            		System.out.println(linha.toLowerCase());
+            	}        		
         		formatacao.add(linha.toLowerCase());
         	}
         	reader.close();
@@ -74,15 +85,22 @@ public class IntegralApi {
         	Set<Entry<String, JsonElement>> mapa = objEntrada.entrySet();
         	
         	Iterator<Entry<String, JsonElement>> it = mapa.iterator();
+        	int nargs = mapa.size() * 2 + 2;
+        	String[] args = new String[nargs];
+        	args[0] = "cblapi";
+        	args[1] = programa;
+        	int a = 2;
         	while (it.hasNext()) {
         		Entry<String, JsonElement> arg = it.next();
         		cmd.append(" -" + arg.getKey() + " " + arg.getValue());
+        		args[a++] = "-" + arg.getKey();
+        		args[a++] = arg.getValue().toString().replace("\"", "");
         	}
         	if (dbg > 0) {
         		System.out.println("cmd: " + cmd.toString());
         	}
         	
-        	Process proc = Runtime.getRuntime().exec(cmd.toString());
+        	Process proc = Runtime.getRuntime().exec(args);
         	proc.waitFor();
         	int ret = proc.exitValue();
         	if (dbg > 0) {
@@ -110,6 +128,9 @@ public class IntegralApi {
 			
 		} catch (Exception e) {
 			e.printStackTrace();
+        	if (dbg > 0) {
+        		System.out.println("INTERNAL_SERVER_ERROR:" + e.getMessage());
+        	}        				
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 		}
     }
