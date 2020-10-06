@@ -18,6 +18,9 @@ public class Json {
     	itens = new ArrayList<>();
     	for (int f=0; f<formatacao.size(); f++) {
     		String[] args = formatacao.get(f).split("\\s+");
+    		if (args.length < 3) {
+    			continue;
+    		}
     		int nivel = Integer.parseInt(args[1]);
     		if (nivel == 1) {
     			continue;
@@ -61,7 +64,6 @@ public class Json {
     	
     	json = new StringBuilder();
     	carregaItem(0);
-    	System.out.println(json.toString());
     	return json.toString();
     }
     

@@ -80,8 +80,6 @@ public class IntegralApi {
         	JsonElement entrada = JsonParser.parseString(json);
         	JsonObject objEntrada = entrada.getAsJsonObject();
 
-        	StringBuilder cmd = new StringBuilder();
-        	cmd.append("cblapi " + programa);
         	Set<Entry<String, JsonElement>> mapa = objEntrada.entrySet();
         	
         	Iterator<Entry<String, JsonElement>> it = mapa.iterator();
@@ -92,12 +90,15 @@ public class IntegralApi {
         	int a = 2;
         	while (it.hasNext()) {
         		Entry<String, JsonElement> arg = it.next();
-        		cmd.append(" -" + arg.getKey() + " " + arg.getValue());
         		args[a++] = "-" + arg.getKey();
         		args[a++] = arg.getValue().toString().replace("\"", "");
         	}
         	if (dbg > 0) {
-        		System.out.println("cmd: " + cmd.toString());
+        		System.out.print("cmd:");
+        		for (a=0; a<args.length; a++) {
+        			System.out.print(" " + args[a]);
+        		}
+        		System.out.println();
         	}
         	
         	Process proc = Runtime.getRuntime().exec(args);
