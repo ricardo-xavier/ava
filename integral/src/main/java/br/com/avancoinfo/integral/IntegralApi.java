@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -34,7 +35,7 @@ public class IntegralApi {
     	if (dbg > 0) {
     		System.out.println("hello: " + System.getProperty("user.dir"));
     	}
-        return "API integral v0.1.0-SNAPSHOT";
+        return "API integral v0.2.0-SNAPSHOT";
     }
 
     @PostMapping("/executa/{programa}")
@@ -83,6 +84,8 @@ public class IntegralApi {
         	Set<Entry<String, JsonElement>> mapa = objEntrada.entrySet();
         	
         	Iterator<Entry<String, JsonElement>> it = mapa.iterator();
+        	
+        	/* passagem por linha de comando
         	int nargs = mapa.size() * 2 + 2;
         	String[] args = new String[nargs];
         	args[0] = "cblapi";
@@ -100,8 +103,31 @@ public class IntegralApi {
         		}
         		System.out.println();
         	}
-        	
+        	*/
+
+        	// passagem pela entrada padrao
+        	String[] args = new String[2];
+        	args[0] = "cblapi";
+        	args[1] = programa;
         	Process proc = Runtime.getRuntime().exec(args);
+        	
+        	PrintStream writer = new PrintStream(proc.getOutputStream());
+        	writer.println(mapa.size() * 2);
+        	if (dbg > 1) {
+        		System.out.println("write: " + mapa.size() * 2);
+        	}        	
+        	while (it.hasNext()) {
+        		Entry<String, JsonElement> arg = it.next();
+        		writer.println("-" + arg.getKey());
+        		writer.println(arg.getValue().toString().replace("\"", ""));
+        		if (dbg > 1) {
+        			System.out.println("write: " + "-" + arg.getKey());
+        			System.out.println("write: " + arg.getValue().toString().replace("\"", ""));
+        		}
+        	}
+        	writer.flush();
+        	writer.close();
+
         	proc.waitFor();
         	int ret = proc.exitValue();
         	if (dbg > 0) {
