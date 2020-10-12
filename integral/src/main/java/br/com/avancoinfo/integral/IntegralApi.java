@@ -43,8 +43,8 @@ public class IntegralApi {
     @GetMapping
     public String hello() {
     	Logger logger = LoggerFactory.getLogger(IntegralApi.class);
-    	logger.info("hello: API integral v0.2.0-SNAPSHOT");
-        return "API integral v0.2.0-SNAPSHOT";
+    	logger.info("hello: API integral " + IntegralApplication.getVersao());
+        return "API integral " + IntegralApplication.getVersao();
     }
 
     @PostMapping("/executa/{programa}")
@@ -52,7 +52,7 @@ public class IntegralApi {
     	
     	Logger logger = LoggerFactory.getLogger(IntegralApi.class);
     	try {
-    		
+
         	logger.info("executa: " + programa);
         	logger.info(json);
         	
@@ -141,29 +141,19 @@ public class IntegralApi {
     	
     	Logger logger = LoggerFactory.getLogger(IntegralApi.class);
     	try {
-    		
+
         	logger.info("executa: " + id + " " + programa);
         	logger.info(json);
         	
         	Socket sock = sockets.get(id);
         	if (sock == null) {
-        		//TODO agente nao conectado
+        		return new ResponseEntity<>("Agente " + id + " nao conectado", HttpStatus.INTERNAL_SERVER_ERROR);
         	}
-        	
-			int n = programa.length();
-			sock.getOutputStream().write(n);
-			sock.getOutputStream().write(programa.getBytes(), 0, n);
-			n = json.length();
-			sock.getOutputStream().write(n);
-			sock.getOutputStream().write(json.getBytes(), 0, n);
-			
-			byte[] bytes = new byte[9];
-			sock.getInputStream().read(bytes, 0, 9);
-			n = Integer.parseInt(new String(bytes));
-        	System.err.println(n);
-        	logger.info("resp: " + n);
-        	byte[] resp = sock.getInputStream().readNBytes(n);
-        	json = new String(resp);
+
+        	Comunicacao.enviaMensagem(sock.getOutputStream(), programa);
+        	Comunicacao.enviaMensagem(sock.getOutputStream(), json);
+
+        	json = Comunicacao.recebeMensagem(sock.getInputStream());
         	logger.info("resp: " + json);
         	
 	        return new ResponseEntity<>(json.toString(), HttpStatus.OK);

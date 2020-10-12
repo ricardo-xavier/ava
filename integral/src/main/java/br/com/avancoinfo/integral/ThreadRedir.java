@@ -6,24 +6,22 @@ import java.net.Socket;
 
 public class ThreadRedir extends Thread {
 	
-	private static final int PORTA = 9000;
+	private static int porta = 8081;
 	
 	@Override
 	public void run() {
 		
 		try {
-			ServerSocket serverSock = new ServerSocket(PORTA);
+			ServerSocket serverSock = new ServerSocket(porta);
 			while (true) {
 			
 				Socket sock = serverSock.accept();
 				if (sock == null) {
 					break;
 				}
-				byte[] bytes = new byte[9];
-				sock.getInputStream().read(bytes, 0, 9);
-				int id = Integer.parseInt(new String(bytes));
+				String s = Comunicacao.recebeMensagem(sock.getInputStream());
+				int id = Integer.parseInt(s);
 				IntegralApi.getSockets().put(id, sock);
-				sock.getOutputStream().write(0);
 				
 			}
 			serverSock.close();
@@ -32,6 +30,14 @@ public class ThreadRedir extends Thread {
 			e.printStackTrace();
 		}
 		
+	}
+
+	public static int getPorta() {
+		return porta;
+	}
+
+	public static void setPorta(int porta) {
+		ThreadRedir.porta = porta;
 	}
 
 }

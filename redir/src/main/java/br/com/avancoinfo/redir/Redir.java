@@ -14,9 +14,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -26,7 +26,7 @@ public class Redir {
 	
 	private static Logger logger = Logger.getLogger("redir");
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SecurityException, IOException {
 		
 		logger.info("redir v1.0.0");
 		if (args.length < 3) {
@@ -34,10 +34,7 @@ public class Redir {
 			return;
 		}
 		if ((args.length > 3) && args[3].equals("-d")) {
-			logger.setLevel(Level.FINE);
-			ConsoleHandler handler = new ConsoleHandler();
-	        handler.setLevel(Level.FINE);
-	        logger.addHandler(handler);			
+			logger.setLevel(Level.DEBUG);
 		}
 		
 		String servidor = args[0];
@@ -63,19 +60,8 @@ public class Redir {
     			
     			// envia o id do cliente
     			String s = String.format("%09d", id);
-    			sock.getOutputStream().write(s.getBytes(), 0, 9);
+    			enviaMensagem(sock.getOutputStream(), s);
 
-    			// recebe o status enviado pelo servidor
-    			int ret = sock.getInputStream().read();
-    			if (ret != 0) {
-    				logger.info("ERRO #" + ret);
-    				String erro = recebeMensagem(sock.getInputStream());
-    				logger.info(erro);
-    				sock.close();
-    				pausa();
-    				continue;
-    			}
-    			
     			// recebe comandos
     			while (true) {
     				
@@ -87,7 +73,7 @@ public class Redir {
     				logger.info("programa: " + programa);
     				
     				String json = recebeMensagem(sock.getInputStream());
-    				logger.fine(json);
+    				logger.debug(json);
     				
     				//TODO cache com a formatacao do programa
     		    	File fCpy = null;
@@ -112,7 +98,7 @@ public class Redir {
     	        	BufferedReader reader = new BufferedReader(new FileReader(fCpy));
     	        	String linha;
     	        	while ((linha = reader.readLine()) != null) {
-    	           		logger.fine(linha.toLowerCase());
+    	           		logger.debug(linha.toLowerCase());
     	        		formatacao.add(linha.toLowerCase());
     	        	}
     	        	reader.close();
@@ -133,13 +119,13 @@ public class Redir {
     	        	// passa os argumentos pela entrada padrao
     	        	PrintStream entradaPadrao = new PrintStream(proc.getOutputStream());
     	        	entradaPadrao.println(mapa.size() * 2);
-    	       		logger.fine("write: " + mapa.size() * 2);
+    	       		logger.debug("write: " + mapa.size() * 2);
     	        	while (it.hasNext()) {
     	        		Entry<String, JsonElement> arg = it.next();
     	        		entradaPadrao.println("-" + arg.getKey());
     	        		entradaPadrao.println(arg.getValue().toString().replace("\"", ""));
-    	        		logger.fine("write: " + "-" + arg.getKey());
-    	        		logger.fine("write: " + arg.getValue().toString().replace("\"", ""));
+    	        		logger.debug("write: " + "-" + arg.getKey());
+    	        		logger.debug("write: " + arg.getValue().toString().replace("\"", ""));
     	        	}
     	        	entradaPadrao.flush();
     	        	entradaPadrao.close();
@@ -156,7 +142,7 @@ public class Redir {
     		    		break;
     					
     				}
-    	        	ret = proc.exitValue();
+    	        	int ret = proc.exitValue();
     	       		logger.info("exit: " + ret);
     	       		
     	       		// recupera a resposta
@@ -167,14 +153,14 @@ public class Redir {
     	        	}
     	        	List<String> resposta = new ArrayList<String>();
     	        	while ((linha = reader.readLine()) != null) {
-    	           		logger.fine(linha);
+    	           		logger.debug(linha);
     	            	resposta.add(linha);
     	        	}
     	        	reader.close();        	
 
     	        	// formata o json com a resposta
     	        	json = new Json().toJson(formatacao, resposta);
-    	       		logger.fine(json);
+    	       		logger.debug(json);
     				
     	       		// envia a resposta
     	       		enviaMensagem(sock.getOutputStream(), json);
@@ -198,17 +184,31 @@ public class Redir {
 	}
 
 	private static String recebeMensagem(InputStream inputStream) throws IOException {
-		int n = inputStream.read();
-		byte[] bytes = inputStream.readNBytes(n);
+		byte[] bytes = readNBytes(inputStream, 9);
+		int n = Integer.parseInt(new String(bytes));
+		bytes = readNBytes(inputStream, n);
+		//System.err.println("recebe " + n + " " + new String(bytes));
 		return new String(bytes);
 	}
 	
+	private static byte[] readNBytes(InputStream inputStream, int n) throws IOException {
+		byte[] bytes = new byte[n];
+		int pos = 0;
+		while (n > 0) {
+			int b = inputStream.read(bytes, pos, n);
+			n -= b;
+			pos += b;
+		}
+		return bytes;
+	}
 
 	private static void enviaMensagem(OutputStream outputStream, String mensagem) throws IOException {
 		int n = mensagem.length();
 		String s = String.format("%09d", n);
 		outputStream.write(s.getBytes(), 0, 9);
+		//System.err.println("envia " + 9 + " " + s);
 		outputStream.write(mensagem.getBytes(), 0, n);
+		//System.err.println("envia " + n + " " + mensagem);
 	}	
 
 }
