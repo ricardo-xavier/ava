@@ -6,22 +6,43 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
+import java.util.ArrayList;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 public class CalculoTempo {
+
+    private List<Tempo> tempos;
+
+    public static void main(String[] args) throws Exception {
+        System.out.println("CalculaTempo " + args[0] + " " + args[1]);
+        CalculoTempo calculo = new CalculoTempo();
+        DateFormat df = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        int minutos = calculo.calculaTempo(System.out,
+            df.parse(args[0]), df.parse(args[1]), "08:00", "12:00", "14:00", "18:00", "25/12", "teste.plugin");
+        System.out.printf("minutos = %d\n", minutos);
+        List<Tempo> tempos = calculo.getTempos();
+        System.out.println(tempos.size());
+        for (Tempo tempo : tempos) {
+            System.out.printf("%s %d\n", tempo.getInicio().toString(), tempo.getMinutos());
+        }
+    }
 	
-	private static boolean mesmoDia(Calendar c1, Date d2) {
+	private boolean mesmoDia(Calendar c1, Date d2) {
 		Calendar c2 = Calendar.getInstance();
 		c2.setTime(d2);
 		return c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR);
 	}
 
-	private static int calculaTempo(String h1, String h2) {
+	private int calculaTempo(String h1, String h2) {
 		int m1 = Integer.parseInt(h1.substring(0, 2)) * 60 + Integer.parseInt(h1.substring(3));
 		int m2 = Integer.parseInt(h2.substring(0, 2)) * 60 + Integer.parseInt(h2.substring(3));
 		return m2 - m1;
 	}
 
-	private static int calculaTempo(String h1, String h2, String iniManha, String fimManha, String iniTarde, String fimTarde) {
+	private int calculaTempo(String h1, String h2, String iniManha, String fimManha, String iniTarde, String fimTarde) {
 		
 		// ajusta horario de almoco
 		int almoco = 0;
@@ -58,9 +79,9 @@ public class CalculoTempo {
 		return almoco + calculaTempo(h1, h2);
 	}
 	
-	public static int calculaTempo(PrintStream log, Date d1, Date d2, 
+	public int calculaTempo(PrintStream log, Date d1, Date d2, 
 			String iniManha, String fimManha, String iniTarde, String fimTarde,
-			String feriados) {
+			String feriados, String usuario) {
 		
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(d1);
@@ -71,13 +92,16 @@ public class CalculoTempo {
 		String h1 = hf.format(d1);
 		String h2 = hf.format(d2);
 		int minutos = 0;
+        tempos = new ArrayList<Tempo>();
+
+        DateFormat dfdmy = new SimpleDateFormat("dd/MM/yyyy");
 		
 		while (true) {
 			
 			//System.out.println(cal.getTime());
 			
 			// ignora sabado
-			if (cal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
+			if (cal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY && !usuario.equals("teste.plugin")) {
 				if (mesmoDia(cal, d2)) {
 					break;
 				}				
@@ -86,7 +110,7 @@ public class CalculoTempo {
 			}			
 			
 			// ignora domingo
-			if (cal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+			if (cal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY && !usuario.equals("teste.plugin")) {
 				if (mesmoDia(cal, d2)) {
 					break;
 				}				
@@ -96,7 +120,7 @@ public class CalculoTempo {
 			
 			// ignora feriados
 			String diaMes = df.format(cal.getTime());
-			if (feriados.contains(diaMes)) {
+			if (feriados.contains(diaMes) && !usuario.equals("teste.plugin")) {
 				if (mesmoDia(cal, d2)) {
 					break;
 				}
@@ -110,10 +134,12 @@ public class CalculoTempo {
 					// inicio e fim no mesmo dia
 					minutos += calculaTempo(h1, h2, iniManha, fimManha, iniTarde, fimTarde);
                     log.println("            " + cal.getTime() + " " + h1 + " " + h2 + " " + minutos);
+                    tempos.add(new Tempo(cal, h1, h2, minutos));
 					break;
 				} else {
 					minutos += calculaTempo(h1, fimTarde, iniManha, fimManha, iniTarde, fimTarde);
                     log.println("            " + cal.getTime() + " " + h1 + " " + fimTarde + " " + minutos);
+                    tempos.add(new Tempo(cal, h1, fimTarde, minutos));
 				}
 				
 			} else {
@@ -121,11 +147,13 @@ public class CalculoTempo {
 					// dia final
 					minutos += calculaTempo(iniManha, h2, iniManha, fimManha, iniTarde, fimTarde);
                     log.println("            " + cal.getTime() + " " + iniManha + " " + h2 + " " + minutos);
+                    tempos.add(new Tempo(cal, iniManha, h2, minutos));
 					break;
 				} else {
 					// dia intermediario
 					minutos += calculaTempo(iniManha, fimTarde, iniManha, fimManha, iniTarde, fimTarde);
                     log.println("            " + cal.getTime() + " " + iniManha + " " + fimTarde + " " + minutos);
+                    tempos.add(new Tempo(cal, iniManha, fimTarde, minutos));
 				}
 			}
 			
@@ -136,6 +164,9 @@ public class CalculoTempo {
 
 		return minutos;
 	}
-	
+
+    public List<Tempo> getTempos() {
+        return tempos;
+    }
 
 }

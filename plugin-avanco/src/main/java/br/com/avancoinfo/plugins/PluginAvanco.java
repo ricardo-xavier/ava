@@ -50,7 +50,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         PrintStream log = null;
         try {
             log = new PrintStream(new FileOutputStream("avanco.log", true));
-            log.println("====================PluginAvanco v1.1 " + new Date());
+            log.println("====================PluginAvanco v1.4 " + new Date());
             log.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -261,29 +261,44 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                 // finaliza o registro
 
                 cfg.carregaTurno(user.getName());
-                long difMin = CalculoTempo.calculaTempo(log,
+                CalculoTempo calculo = new CalculoTempo();
+                long difMin = calculo.calculaTempo(log,
                     registroIniciado.getStartDate(), new Date(),
                     cfg.getIniManha(), cfg.getFimManha(),
                     cfg.getIniTarde(), cfg.getFimTarde(),
-                    cfg.getFeriados());
+                    cfg.getFeriados(), user.getName());
                 log.println("        inicio:" + registroIniciado.getStartDate());
                 log.println("        fim   :" + new Date());
                 log.printf ("        turno : %s %s %s %s%n",
                     cfg.getIniManha(), cfg.getFimManha(),
                     cfg.getIniTarde(), cfg.getFimTarde());
 
-                Date inicio = registroIniciado.getStartDate();
-                /*
-                long dif = new Date().getTime() - inicio.getTime();
-                long difMin = dif / 1000 / 60;
-                */
-                log.println("Finalizando registro:" + difMin + "m " + new Date());
-                log.close();
-                WorklogNewEstimateInputParameters params = updateParams((MutableIssue) issue, difMin + "m", inicio, 
-                    registroIniciado.getId());
-                WorklogResult result = worklogService.validateUpdate(context, params);
-                Worklog wl = worklogService.updateAndAutoAdjustRemainingEstimate(context, result, true);
-                worklogManager.update(user, wl, null, false);
+                List<Tempo> tempos = calculo.getTempos();
+
+                for (int t=0; t<tempos.size(); t++) {
+
+                    Tempo tempo = tempos.get(t);
+
+                    if (t > 0) {
+                        log.println("Iniciando registro: " + tempo.getInicio());
+                        log.close();
+                        WorklogNewEstimateInputParameters params = createParams((MutableIssue) issue, "1m", new Date());
+                        WorklogResult result = worklogService.validateCreate(context, params);
+                        Worklog wl = worklogService.createAndAutoAdjustRemainingEstimate(context, result, true);
+                    }
+
+                    if (tempo.getMinutos() == 0) {
+                        tempo.setMinutos(1);
+                    }
+                    log.println("Finalizando registro:" + tempo.getMinutos() + "m " + tempo.getInicio());
+                    log.close();
+                    WorklogNewEstimateInputParameters params = updateParams((MutableIssue) issue, tempo.getMinutos() + "m", 
+                        tempo.getInicio(), registroIniciado.getId());
+                    WorklogResult result = worklogService.validateUpdate(context, params);
+                    Worklog wl = worklogService.updateAndAutoAdjustRemainingEstimate(context, result, true);
+                    worklogManager.update(user, wl, null, false);
+
+                }
                 return;
             }
 
@@ -340,3 +355,5 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 
 // 1.1 - 14/09 - finalizar o evento se o usuario com o worklog aberto for o usuario logado
 // 1.2 - 19/09 - alteracao no calculo de tempo, considerando turnos e dias uteis
+// 1.3 - 08/11 - criar um registro por dia quando fechar uma issue aberta a mais de um dia
+// 1.4 - 12/11 - alterar o tempo para 1 minuto se for encerrado com 0
