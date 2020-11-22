@@ -58,7 +58,9 @@ public class IntegralApi {
     	
     		String cobCpy = System.getenv("COBCPY");
     		if (cobCpy == null) {
-    			return new ResponseEntity<>("COBCPY nao definida", HttpStatus.INTERNAL_SERVER_ERROR);
+    			String erro = "COBCPY nao definida";
+    			logger.info(erro);
+    			return new ResponseEntity<>(erro, HttpStatus.INTERNAL_SERVER_ERROR);
     		}
     	
     		File fCpy = null;
@@ -72,7 +74,9 @@ public class IntegralApi {
     			fCpy = null;
     		}
     		if (fCpy == null) {
-    			return new ResponseEntity<>("Configuracao nao encontrada: " + programa.toUpperCase() + ".CPY", HttpStatus.INTERNAL_SERVER_ERROR);
+    			String erro = "Configuracao nao encontrada: " + programa.toUpperCase() + ".CPY";
+    			logger.info(erro);
+    			return new ResponseEntity<>(erro, HttpStatus.INTERNAL_SERVER_ERROR);
     		}
 
     		List<String> formatacao = new ArrayList<String>();
@@ -96,9 +100,9 @@ public class IntegralApi {
     		for (String prm : prms) {
     			String[] nomeValor = prm.split("=");
     			writer.println("-" + nomeValor[0]);
-    			writer.println(nomeValor[1]);
+    			writer.println(nomeValor.length > 1 ? nomeValor[1] : "");
     			logger.debug("write: " + "-" + nomeValor[0]);
-    			logger.debug("write: " + nomeValor[1]);
+    			logger.debug("write: " + (nomeValor.length > 1 ? nomeValor[1] : ""));
     		}
     		writer.flush();
     		writer.close();
