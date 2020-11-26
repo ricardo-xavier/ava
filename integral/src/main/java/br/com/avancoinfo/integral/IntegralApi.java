@@ -99,6 +99,10 @@ public class IntegralApi {
     		logger.debug("write: " + prms.length);
     		for (String prm : prms) {
     			String[] nomeValor = prm.split("=");
+    			if ((nomeValor.length == 1) || nomeValor[1].equals("null")) {
+    				logger.debug("nulo: " + "-" + nomeValor[0]);
+    				continue;
+    			}
     			writer.println("-" + nomeValor[0]);
     			writer.println(nomeValor.length > 1 ? nomeValor[1] : "");
     			logger.debug("write: " + "-" + nomeValor[0]);

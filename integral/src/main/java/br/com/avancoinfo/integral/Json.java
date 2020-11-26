@@ -33,13 +33,15 @@ public class Json {
     		item.setNivel(nivel);
     		item.setNome(nome);
     		
-    		if (args[3].equals("occurs")) {
-    			item.setArray(true);
-    		}
+    		if (args.length > 3) {
+    			if (args[3].equals("occurs")) {
+    				item.setArray(true);
+    			}
     		
-    		if (args[3].equals("pic")) {
-    			item.setElementar(true);
-    			item.setPic(args[4]);
+    			if (args[3].equals("pic")) {
+    				item.setElementar(true);
+    				item.setPic(args[4]);
+    			}
     		}
     		
     		itens.add(item);
@@ -82,7 +84,7 @@ public class Json {
     			}
     		}
     		if (item.getPic().startsWith("x")) {
-    			json.append(String.format("\"%s\": \"%s\"%s%n", item.getNome(), item.getValor(), virgula));
+    			json.append(String.format("\"%s\": \"%s\"%s%n", item.getNome(), item.getValor().trim(), virgula));
     		} else {
     			int v = item.getPic().indexOf("v");
     			if (v < 0) {
