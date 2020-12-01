@@ -50,7 +50,7 @@ public class IntegralApi {
     }
     
     // chamado pelo GET e pelo POST
-    private ResponseEntity<String> executa(String programa, String[] prms) {
+    private ResponseEntity<String> executa(String programa, String[] prms, Map<String, String[]> filhos) {
 
     	try {
     		
@@ -95,18 +95,63 @@ public class IntegralApi {
     		Process proc = Runtime.getRuntime().exec(args);
     	
     		PrintStream writer = new PrintStream(proc.getOutputStream());
-    		writer.println(prms.length);
-    		logger.debug("write: " + prms.length);
+    		
+    		if (prms.length == 1) {
+    			String[] nomeValor = prms[0].split("=");
+    			if ((nomeValor.length == 2) || nomeValor[1].startsWith("{")) {
+    				try {
+    					filhos = new HashMap<String, String[]>();
+    					prms = getPrmsFromJson(nomeValor[1], filhos);
+    				} catch (Exception e) {
+    					e.printStackTrace();
+    					return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+    				}
+    		       	
+    			}
+    		}
+
+    		int numPrms = prms.length;
+    		if (filhos != null) {
+    			Iterator<String> it = filhos.keySet().iterator();
+    			while (it.hasNext()) {
+    				String pai = it.next();
+    				String[] prmsFilhos = filhos.get(pai);
+    				if (prmsFilhos != null) {
+    					numPrms += prmsFilhos.length - 1;
+    				}
+    			}
+    		}
+    		writer.println(numPrms);
+    		logger.debug("write: " + numPrms);
+    		
     		for (String prm : prms) {
     			String[] nomeValor = prm.split("=");
-    			if ((nomeValor.length == 1) || nomeValor[1].equals("null")) {
+    			if ((nomeValor.length == 1) || nomeValor[1].equals("null")) { 
     				logger.debug("nulo: " + "-" + nomeValor[0]);
     				continue;
     			}
-    			writer.println("-" + nomeValor[0]);
-    			writer.println(nomeValor.length > 1 ? nomeValor[1] : "");
-    			logger.debug("write: " + "-" + nomeValor[0]);
-    			logger.debug("write: " + (nomeValor.length > 1 ? nomeValor[1] : ""));
+    			if (nomeValor.length > 1 && nomeValor[1].startsWith("#")) {
+    				String pai = nomeValor[1].substring(1);
+    				String[] prmsFilhos = filhos.get(pai);
+    	    		for (String prmFilho : prmsFilhos) {
+    	    			String[] nomeValorFilho = prmFilho.split("=");
+    	    			if ((nomeValorFilho.length == 1) || nomeValorFilho[1].equals("null")) { 
+    	    				logger.debug("nulo: " + "-" + nomeValorFilho[0]);
+    	    				continue;
+    	    			} else {
+    	    				writer.println("-" + nomeValorFilho[0]);
+    	    				writer.println(nomeValorFilho.length > 1 ? nomeValorFilho[1] : "");
+    	    				logger.debug("write: " + "-" + nomeValorFilho[0]);
+    	    				logger.debug("write: " + (nomeValorFilho.length > 1 ? nomeValorFilho[1] : ""));
+    	    			}
+    	    		}
+    				
+    			} else {
+    				writer.println("-" + nomeValor[0]);
+    				writer.println(nomeValor.length > 1 ? nomeValor[1] : "");
+    				logger.debug("write: " + "-" + nomeValor[0]);
+    				logger.debug("write: " + (nomeValor.length > 1 ? nomeValor[1] : ""));
+    			}
     		}
     		writer.flush();
     		writer.close();
@@ -148,7 +193,7 @@ public class IntegralApi {
     	logger.info(queryString);
 
 		String[] prms = queryString.split("&");
-		return executa(programa, prms);
+		return executa(programa, prms, null);
     }
 
     @PostMapping("/executa/{programa}")
@@ -158,11 +203,17 @@ public class IntegralApi {
        	logger.info("executa POST : " + programa);
        	logger.info(json);
 
-       	String[] prms = getPrmsFromJson(json);
-       	return executa(programa, prms);
+		try {
+			Map<String, String[]> filhos = new HashMap<String, String[]>();
+			String[] prms = getPrmsFromJson(json, filhos);
+			return executa(programa, prms, filhos);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+		}
     }
 
-    private String[] getPrmsFromJson(String json) {
+    private String[] getPrmsFromJson(String json, Map<String, String[]> filhos) throws Exception {
     	
     	JsonElement entrada = JsonParser.parseString(json);
     	JsonObject objEntrada = entrada.getAsJsonObject();
@@ -172,7 +223,24 @@ public class IntegralApi {
     	int i = 0;
     	while (it.hasNext()) {
     		Entry<String, JsonElement> arg = it.next();
-    		prms[i] = arg.getKey() + "=" + arg.getValue().toString().replace("\"", "");
+    		String valor = arg.getValue().toString();
+    		JsonElement elemento = arg.getValue();
+    		if (elemento != null) {
+    			if (elemento.isJsonArray()) {
+    				valor = valor.trim();
+    				valor = valor.substring(1, valor.length()-1);
+    			}
+    			if (elemento.isJsonObject()) {
+   					String[] prms2 = getPrmsFromJson(valor, null);
+   					if (filhos != null) {
+   						filhos.put(arg.getKey(), prms2);
+   					}
+   		    		prms[i] = arg.getKey() + "=" + "#" + arg.getKey();
+   		    		i++;
+   		    		continue;
+    			}
+    		}
+    		prms[i] = arg.getKey() + "=" + valor.replace("\"", "");
     		i++;
     	}
     	return prms;
