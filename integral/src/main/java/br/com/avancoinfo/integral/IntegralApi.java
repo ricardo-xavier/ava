@@ -195,6 +195,22 @@ public class IntegralApi {
 		String[] prms = queryString.split("&");
 		return executa(programa, prms, null);
     }
+    
+    @GetMapping("/executa/{diretorio}/{programa}")
+    public ResponseEntity<String> executaDiretorio(@PathVariable("diretorio") String diretorio,
+    		@PathVariable("programa") String programa, 
+    		HttpServletRequest request) {
+
+		@SuppressWarnings("deprecation")
+		String queryString = java.net.URLDecoder.decode(request.getQueryString());
+
+    	Logger logger = LoggerFactory.getLogger(IntegralApi.class);
+    	logger.info("executa GET : " + programa);
+    	logger.info(queryString);
+
+		String[] prms = queryString.split("&");
+		return executa(programa, prms, null);
+    }
 
     @PostMapping("/executa/{programa}")
     public ResponseEntity<String> executa(@PathVariable("programa") String programa, @RequestBody String json) {
