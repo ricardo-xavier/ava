@@ -18,6 +18,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -173,7 +174,15 @@ public class IntegralApi {
 
     		String json = new Json().toJson(formatacao, resposta);
     		logger.debug(json);
-    		return new ResponseEntity<>(json.toString(), HttpStatus.OK);
+
+    		HttpHeaders responseHeaders = new HttpHeaders();
+    	    responseHeaders.set("Access-Control-Allow-Headers", "authorization");
+    	    responseHeaders.set("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
+    	    responseHeaders.set("Access-Control-Allow-Origin", "*");
+    	    
+    	    return ResponseEntity.ok()
+    	    	      .headers(responseHeaders)
+    	    	      .body(json.toString());
         
     	} catch (Exception e) {
     		e.printStackTrace();
