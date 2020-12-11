@@ -176,9 +176,9 @@ public class IntegralApi {
     		logger.debug(json);
 
     		HttpHeaders responseHeaders = new HttpHeaders();
-    	    responseHeaders.set("Access-Control-Allow-Headers", "authorization");
-    	    responseHeaders.set("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
-    	    responseHeaders.set("Access-Control-Allow-Origin", "*");
+    	    //responseHeaders.set("Access-Control-Allow-Headers", "authorization");
+    	    //responseHeaders.set("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
+    	    responseHeaders.set("Access-Control-Allow-Origin", "");
     	    
     	    return ResponseEntity.ok()
     	    	      .headers(responseHeaders)
