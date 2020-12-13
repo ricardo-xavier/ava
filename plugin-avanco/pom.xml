@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>br.com.avancoinfo</groupId>
     <artifactId>plugin-avanco</artifactId>
-    <version>1.4</version>
+    <version>1.5</version>
     <organization>
         <name>Avanço Informática</name>
         <url>https://avancoinfo.com.br/</url>
@@ -151,7 +151,7 @@
         </plugins>
     </build>
     <properties>
-        <jira.version>7.7.1</jira.version>
+        <jira.version>6.2.4</jira.version>
         <amps.version>6.3.21</amps.version>
         <plugin.testrunner.version>1.2.3</plugin.testrunner.version>
         <atlassian.spring.scanner.version>1.2.13</atlassian.spring.scanner.version>
