@@ -44,10 +44,16 @@ public class IntegralApi {
 	}
 	
     @GetMapping
-    public String hello() {
+    public ResponseEntity<String> hello() {
     	Logger logger = LoggerFactory.getLogger(IntegralApi.class);
     	logger.info("hello: API integral " + IntegralApplication.getVersao());
-        return "API integral " + IntegralApplication.getVersao();
+		HttpHeaders responseHeaders = new HttpHeaders();
+	    responseHeaders.set("Access-Control-Allow-Headers", "*");
+	    responseHeaders.set("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
+	    responseHeaders.set("Access-Control-Allow-Origin", "*");
+	    return ResponseEntity.ok()
+	    	      .headers(responseHeaders)
+	    	      .body("API integral " + IntegralApplication.getVersao());
     }
     
     // chamado pelo GET e pelo POST
@@ -176,9 +182,9 @@ public class IntegralApi {
     		logger.debug(json);
 
     		HttpHeaders responseHeaders = new HttpHeaders();
-    	    //responseHeaders.set("Access-Control-Allow-Headers", "authorization");
-    	    //responseHeaders.set("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
-    	    responseHeaders.set("Access-Control-Allow-Origin", "");
+    	    responseHeaders.set("Access-Control-Allow-Headers", "*");
+    	    responseHeaders.set("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
+    	    responseHeaders.set("Access-Control-Allow-Origin", "*");
     	    
     	    return ResponseEntity.ok()
     	    	      .headers(responseHeaders)

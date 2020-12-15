@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class IntegralApplication {
 	
-	private static final String VERSAO = "v1.5.1";
+	private static final String VERSAO = "v1.5.2";
 
 	public static void main(String[] args) {
 		
