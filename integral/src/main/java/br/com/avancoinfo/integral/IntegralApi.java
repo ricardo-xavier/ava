@@ -24,14 +24,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
+@CrossOrigin
 @RestController
 @RequestMapping(path = "/integral")
 public class IntegralApi {
@@ -43,21 +47,23 @@ public class IntegralApi {
 		redir.start();
 	}
 	
-    @GetMapping
-    public ResponseEntity<String> hello() {
-    	Logger logger = LoggerFactory.getLogger(IntegralApi.class);
-    	logger.info("hello: API integral " + IntegralApplication.getVersao());
-		HttpHeaders responseHeaders = new HttpHeaders();
-	    responseHeaders.set("Access-Control-Allow-Headers", "*");
-	    responseHeaders.set("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
-	    responseHeaders.set("Access-Control-Allow-Origin", "*");
-	    return ResponseEntity.ok()
-	    	      .headers(responseHeaders)
-	    	      .body("API integral " + IntegralApplication.getVersao());
+    @RequestMapping(method = RequestMethod.OPTIONS, value="/**")
+    public ResponseEntity<String> optionsExecutaDiretorio() {
+        Logger logger = LoggerFactory.getLogger(IntegralApi.class);
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.set("Access-Control-Allow-Headers", "*");
+        responseHeaders.set("Access-Control-Allow-Methods", "GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS");        
+        return ResponseEntity.ok()
+                    .headers(responseHeaders)
+                    .body("");
     }
-    
+
     // chamado pelo GET e pelo POST
     private ResponseEntity<String> executa(String programa, String[] prms, Map<String, String[]> filhos) {
+
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.set("Access-Control-Allow-Headers", "*");
+        responseHeaders.set("Access-Control-Allow-Methods", "*");
 
     	try {
     		
@@ -67,7 +73,7 @@ public class IntegralApi {
     		if (cobCpy == null) {
     			String erro = "COBCPY nao definida";
     			logger.info(erro);
-    			return new ResponseEntity<>(erro, HttpStatus.INTERNAL_SERVER_ERROR);
+    		    return new ResponseEntity<>("{ \"message\": \"" + erro.replaceAll("\"","\\\\\"") + "\" }", responseHeaders, HttpStatus.INTERNAL_SERVER_ERROR);
     		}
     	
     		File fCpy = null;
@@ -83,7 +89,7 @@ public class IntegralApi {
     		if (fCpy == null) {
     			String erro = "Configuracao nao encontrada: " + programa.toUpperCase() + ".CPY";
     			logger.info(erro);
-    			return new ResponseEntity<>(erro, HttpStatus.INTERNAL_SERVER_ERROR);
+    		    return new ResponseEntity<>("{ \"message\": \"" + erro.replaceAll("\"","\\\\\"") + "\" }", responseHeaders, HttpStatus.INTERNAL_SERVER_ERROR);
     		}
 
     		List<String> formatacao = new ArrayList<String>();
@@ -111,7 +117,7 @@ public class IntegralApi {
     					prms = getPrmsFromJson(nomeValor[1], filhos);
     				} catch (Exception e) {
     					e.printStackTrace();
-    					return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+    		            return new ResponseEntity<>("{ \"message\": \"" + e.getMessage().replaceAll("\"","\\\\\"") + "\" }", responseHeaders, HttpStatus.INTERNAL_SERVER_ERROR);
     				}
     		       	
     			}
@@ -180,11 +186,6 @@ public class IntegralApi {
 
     		String json = new Json().toJson(formatacao, resposta);
     		logger.debug(json);
-
-    		HttpHeaders responseHeaders = new HttpHeaders();
-    	    responseHeaders.set("Access-Control-Allow-Headers", "*");
-    	    responseHeaders.set("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
-    	    responseHeaders.set("Access-Control-Allow-Origin", "*");
     	    
     	    return ResponseEntity.ok()
     	    	      .headers(responseHeaders)
@@ -192,7 +193,7 @@ public class IntegralApi {
         
     	} catch (Exception e) {
     		e.printStackTrace();
-    		return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+    		return new ResponseEntity<>("{ \"message\": \"" + e.getMessage().replaceAll("\"","\\\\\"") + "\" }", responseHeaders, HttpStatus.INTERNAL_SERVER_ERROR);
     	}
 
     }

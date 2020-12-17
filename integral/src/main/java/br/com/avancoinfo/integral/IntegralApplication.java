@@ -4,12 +4,14 @@ import java.util.Collections;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.context.annotation.Bean;
 @SpringBootApplication
 public class IntegralApplication {
 	
-	private static final String VERSAO = "v1.5.2";
-
+	private static final String VERSAO = "v1.5.1";
+	
 	public static void main(String[] args) {
 		
 		SpringApplication app = new SpringApplication(IntegralApplication.class);
@@ -38,6 +40,20 @@ public class IntegralApplication {
 		System.out.println("API integral " + IntegralApplication.getVersao());
         app.run(args);
 	}
+
+    
+	@Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+				registry.addMapping("*")
+				.allowedMethods("GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS")				
+				.allowedHeaders("*");
+            }
+        };
+	}
+    
 
 	public static String getVersao() {
 		return VERSAO;
