@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Bean;
 @SpringBootApplication
 public class IntegralApplication {
 	
-	private static final String VERSAO = "v1.5.3";
+	private static final String VERSAO = "v1.5.4";
 	
 	public static void main(String[] args) {
 		

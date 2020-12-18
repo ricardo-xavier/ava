@@ -84,17 +84,17 @@ public class Json {
     			}
     		}
     		if (item.getPic().startsWith("x")) {
-    			json.append(String.format("\"%s\": \"%s\"%s%n", item.getNome(), item.getValor().trim(), virgula));
+    			json.append(String.format("\"%s\": \"%s\"%s%n", item.getNome().replace('-', '_'), item.getValor().trim(), virgula));
     		} else {
     			int v = item.getPic().indexOf("v");
     			if (v < 0) {
-    				json.append(String.format("\"%s\": %d%s%n", item.getNome(), Long.parseLong(item.getValor()), virgula));
+    				json.append(String.format("\"%s\": %d%s%n", item.getNome().replace('-', '_'), Long.parseLong(item.getValor()), virgula));
     			} else {
     				int decimais = item.getPic().replace(".", "").substring(v+1).length();
     				String inteira = item.getValor().substring(0, item.getValor().length() - decimais);
     				String decimal = item.getValor().substring(item.getValor().length() - decimais);
     				String fmt = String.format("%%0%dd", decimais);
-    				json.append(String.format("\"%s\": %d.%s%s%n", item.getNome(), 
+    				json.append(String.format("\"%s\": %d.%s%s%n", item.getNome().replace('-', '_'), 
     						Long.parseLong(inteira), String.format(fmt, Long.parseLong(decimal)), 
     						virgula));
     			}
@@ -116,7 +116,7 @@ public class Json {
 			if (item.getNivel() == 3) {
 				json.append("[\n");
 			} else {
-				json.append(String.format("\"%s\": [\n", item.getNome()));
+				json.append(String.format("\"%s\": [\n", item.getNome().replace('-', '_')));
 			}
 			int occurs = Integer.parseInt(dados.get(d++));
 			item.setOccurs(occurs);
