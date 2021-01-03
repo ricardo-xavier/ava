@@ -50,7 +50,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         PrintStream log = null;
         try {
             log = new PrintStream(new FileOutputStream("avanco.log", true));
-            log.println("====================PluginAvanco v1.5 " + new Date());
+            log.println("====================PluginAvanco v1.6 " + new Date());
             log.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -276,10 +276,11 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                 List<Tempo> tempos = calculo.getTempos();
                 log.println("Tempo calculado : " + difMin);
 
+                int tempoJaRegistrado = 0;
                 for (int t=0; t<tempos.size(); t++) {
 
                     Tempo tempo = tempos.get(t);
-                    log.printf("tempo %d/%d = %d%n", t, tempos.size(), tempo.getMinutos());
+                    log.printf("tempo %d/%d = %d - %d%n", t, tempos.size(), tempo.getMinutos(), tempoJaRegistrado);
 
                     if (t > 0) {
                         log.println("Iniciando registro: " + tempo.getInicio());
@@ -291,8 +292,11 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                     if (tempo.getMinutos() == 0) {
                         tempo.setMinutos(1);
                     }
-                    log.println("Finalizando registro:" + tempo.getMinutos() + "m " + tempo.getInicio());
-                    WorklogNewEstimateInputParameters params = updateParams((MutableIssue) issue, tempo.getMinutos() + "m", 
+                    // o tempo eh cumulativo
+                    int tempoRegistrar = tempo.getMinutos() - tempoJaRegistrado;
+                    tempoJaRegistrado += tempoRegistrar;
+                    log.println("Finalizando registro:" + tempoRegistrar + "m " + tempo.getInicio());
+                    WorklogNewEstimateInputParameters params = updateParams((MutableIssue) issue, tempoRegistrar + "m", 
                         tempo.getInicio(), registroIniciado.getId());
                     WorklogResult result = worklogService.validateUpdate(context, params);
                     Worklog wl = worklogService.updateAndAutoAdjustRemainingEstimate(context, result, true);
@@ -359,3 +363,4 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 // 1.3 - 08/11 - criar um registro por dia quando fechar uma issue aberta a mais de um dia
 // 1.4 - 12/11 - alterar o tempo para 1 minuto se for encerrado com 0
 // 1.5 - 12/12 - alteracao da versao do jira-api de 7.7.1 para 6.2.4
+// 1.6 - 03/01 - correcao no registro de tempo com mais de uma ocorrencia(retirada do acumulo)
