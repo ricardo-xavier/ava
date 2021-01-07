@@ -28,6 +28,26 @@ public class CalculoTempo {
         for (Tempo tempo : tempos) {
             System.out.printf("%s %d\n", tempo.getInicio().toString(), tempo.getMinutos());
         }
+
+        int tempoJaRegistrado = 0;
+        for (int t=0; t<tempos.size(); t++) {
+
+            Tempo tempo = tempos.get(t);
+            System.out.printf("tempo %d/%d = %d - %d%n", t, tempos.size(), tempo.getMinutos(), tempoJaRegistrado);
+
+            if (t > 0) {
+                System.out.println("Iniciando registro: " + tempo.getInicio());
+            }
+
+            if (tempo.getMinutos() == 0) {
+                tempo.setMinutos(1);
+            }
+            // o tempo eh cumulativo
+            int tempoRegistrar = tempo.getMinutos() - tempoJaRegistrado;
+            tempoJaRegistrado += tempoRegistrar;
+            System.out.println("Finalizando registro:" + tempoRegistrar + "m " + tempo.getInicio());
+
+        }
     }
 	
 	private boolean mesmoDia(Calendar c1, Date d2) {
