@@ -50,7 +50,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         PrintStream log = null;
         try {
             log = new PrintStream(new FileOutputStream("avanco.log", true));
-            log.println("====================PluginAvanco v1.7 " + new Date());
+            log.println("====================PluginAvanco v1.8 " + new Date());
             log.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -233,7 +233,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                     WorklogNewEstimateInputParameters params = createParams((MutableIssue) issue, "1m", new Date());
                     WorklogResult result = worklogService.validateCreate(context, params);
                     Worklog wl = worklogService.createAndAutoAdjustRemainingEstimate(context, result, true);
-                    worklogManager.create(com.atlassian.jira.user.ApplicationUsers.toDirectoryUser(user), wl, null, false);
+                    //worklogManager.create(com.atlassian.jira.user.ApplicationUsers.toDirectoryUser(user), wl, null, false);
                     return;
                 }
             }
@@ -301,7 +301,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                         tempo.getInicio(), registroIniciado.getId());
                     WorklogResult result = worklogService.validateUpdate(context, params);
                     Worklog wl = worklogService.updateAndAutoAdjustRemainingEstimate(context, result, true);
-                    worklogManager.create(com.atlassian.jira.user.ApplicationUsers.toDirectoryUser(user), wl, null, false);
+                    //worklogManager.create(com.atlassian.jira.user.ApplicationUsers.toDirectoryUser(user), wl, null, false);
 
                 }
                 log.close();
@@ -366,3 +366,4 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 // 1.5 - 12/12 - alteracao da versao do jira-api de 7.7.1 para 6.2.4
 // 1.6 - 03/01 - correcao no registro de tempo com mais de uma ocorrencia(retirada do acumulo)
 // 1.7 - 06/01 - correcao no registro de tempo com mais de uma ocorrencia(id)
+// 1.8 - 09/01 - estava registrando os tempos duas vezes
