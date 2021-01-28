@@ -42,6 +42,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
     @JiraImport
     private final EventPublisher eventPublisher;
     private Configuracao cfg;
+    private Boolean registrando = false;
 
     @Autowired
     public PluginAvanco(EventPublisher eventPublisher) {
@@ -50,12 +51,16 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         PrintStream log = null;
         try {
             log = new PrintStream(new FileOutputStream("avanco.log", true));
-            log.println("====================PluginAvanco v1.8 " + new Date());
+            log.println("====================PluginAvanco v1.11 " + new Date());
             log.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
 
+    }
+
+    private String comment(String s) {
+        return ((s == null) || (s.length() < 80)) ? s : s.substring(0, 80);
     }
 
     /**
@@ -118,6 +123,10 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 
     @EventListener
     public void onIssueEvent(IssueEvent issueEvent) {
+
+        if (registrando) {
+            return;
+        }
 
         PrintStream log = null;
 
@@ -195,11 +204,15 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
             Worklog registroIniciado = null;
             List<Worklog> workLogs = worklogManager.getByIssue(issue);
             if (workLogs != null) {
+                for (int i=0; i<workLogs.size(); i++) {
+                    Worklog work = workLogs.get(i);
+                    log.println("registro " + i + "/" + workLogs.size() + " " + work.getStartDate() + " " + work.getAuthorKey() + " " + comment(work.getComment()) + " id=" + work.getId());
+                }
                 for (Worklog work : workLogs) {
                     if ((work.getComment() != null) && (work.getComment().contains(cfg.getMensagemInicio()))) {
                         registroIniciado = work;
                         log.println("registro iniciado: " + registroIniciado.getStartDate() + " " + registroIniciado.getAuthorKey());
-                        break;
+                        //break;
                     }
                 }
             }
@@ -229,11 +242,20 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 
                     // inicia o registro
                     log.println("Iniciando registro: " + new Date());
-                    log.close();
                     WorklogNewEstimateInputParameters params = createParams((MutableIssue) issue, "1m", new Date());
                     WorklogResult result = worklogService.validateCreate(context, params);
                     Worklog wl = worklogService.createAndAutoAdjustRemainingEstimate(context, result, true);
                     //worklogManager.create(com.atlassian.jira.user.ApplicationUsers.toDirectoryUser(user), wl, null, false);
+                    log.println("Iniciando registro: " + new Date() + " id=" + wl.getId()
+                                + " start=" + wl.getStartDate());
+                    workLogs = worklogManager.getByIssue(issue);
+                    if (workLogs != null) {
+                        for (int i=0; i<workLogs.size(); i++) {
+                            Worklog work = workLogs.get(i);
+                            log.println("registro apos create " + i + "/" + workLogs.size() + " " + work.getStartDate() + " " + work.getAuthorKey() + " " + comment(work.getComment()) + " id=" + work.getId());
+                        }
+                    }
+                    log.close();
                     return;
                 }
             }
@@ -260,49 +282,66 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 
                 // finaliza o registro
 
-                cfg.carregaTurno(user.getName());
-                CalculoTempo calculo = new CalculoTempo();
-                long difMin = calculo.calculaTempo(log,
-                    registroIniciado.getStartDate(), new Date(),
-                    cfg.getIniManha(), cfg.getFimManha(),
-                    cfg.getIniTarde(), cfg.getFimTarde(),
-                    cfg.getFeriados(), user.getName());
-                log.println("        inicio:" + registroIniciado.getStartDate());
-                log.println("        fim   :" + new Date());
-                log.printf ("        turno : %s %s %s %s%n",
-                    cfg.getIniManha(), cfg.getFimManha(),
-                    cfg.getIniTarde(), cfg.getFimTarde());
+                synchronized (registrando) {
 
-                List<Tempo> tempos = calculo.getTempos();
-                log.println("Tempo calculado : " + difMin);
+                    registrando = true;
 
-                int tempoJaRegistrado = 0;
-                for (int t=0; t<tempos.size(); t++) {
+                    cfg.carregaTurno(user.getName());
+                    CalculoTempo calculo = new CalculoTempo();
+                    long difMin = calculo.calculaTempo(log,
+                        registroIniciado.getStartDate(), new Date(),
+                        cfg.getIniManha(), cfg.getFimManha(),
+                        cfg.getIniTarde(), cfg.getFimTarde(),
+                        cfg.getFeriados(), user.getName());
+                    log.println("        inicio:" + registroIniciado.getStartDate());
+                    log.println("        fim   :" + new Date());
+                    log.printf ("        turno : %s %s %s %s%n",
+                        cfg.getIniManha(), cfg.getFimManha(),
+                        cfg.getIniTarde(), cfg.getFimTarde());
 
-                    Tempo tempo = tempos.get(t);
-                    log.printf("tempo %d/%d = %d - %d%n", t, tempos.size(), tempo.getMinutos(), tempoJaRegistrado);
+                    List<Tempo> tempos = calculo.getTempos();
+                    log.println("Tempo calculado : " + difMin);
 
-                    if (t > 0) {
-                        WorklogNewEstimateInputParameters params = createParams((MutableIssue) issue, "1m", new Date());
-                        WorklogResult result = worklogService.validateCreate(context, params);
-                        Worklog wl = worklogService.createAndAutoAdjustRemainingEstimate(context, result, true);
-                        registroIniciado = wl;
-                        log.println("Iniciando registro: " + tempo.getInicio() + " " + registroIniciado.getId());
+                    int tempoJaRegistrado = 0;
+                    for (int t=0; t<tempos.size(); t++) {
+
+                        Tempo tempo = tempos.get(t);
+                        log.printf("tempo %d/%d = %d - %d%n", t, tempos.size(), tempo.getMinutos(), tempoJaRegistrado);
+
+                        if (t > 0) {
+                            WorklogNewEstimateInputParameters params = createParams((MutableIssue) issue, "1m", new Date());
+                            WorklogResult result = worklogService.validateCreate(context, params);
+                            Worklog wl = worklogService.createAndAutoAdjustRemainingEstimate(context, result, true);
+                            registroIniciado = wl;
+                            log.println("Iniciando registro: " + tempo.getInicio() + " id=" + registroIniciado.getId()
+                                + " start=" + registroIniciado.getStartDate());
+                        }
+
+                        if (tempo.getMinutos() == 0) {
+                            tempo.setMinutos(1);
+                        }
+                        // o tempo eh cumulativo
+                        int tempoRegistrar = tempo.getMinutos() - tempoJaRegistrado;
+                        tempoJaRegistrado += tempoRegistrar;
+                        log.println("Finalizando registro:" + tempoRegistrar + "m " + tempo.getInicio() + " id=" + registroIniciado.getId()
+                                + " start=" + registroIniciado.getStartDate());
+                        WorklogNewEstimateInputParameters params = updateParams((MutableIssue) issue, tempoRegistrar + "m", 
+                            tempo.getInicio(), registroIniciado.getId());
+                        WorklogResult result = worklogService.validateUpdate(context, params);
+                        Worklog wl = worklogService.updateAndAutoAdjustRemainingEstimate(context, result, true);
+                        //worklogManager.create(com.atlassian.jira.user.ApplicationUsers.toDirectoryUser(user), wl, null, false);
+
                     }
 
-                    if (tempo.getMinutos() == 0) {
-                        tempo.setMinutos(1);
+                    workLogs = worklogManager.getByIssue(issue);
+                    if (workLogs != null) {
+                        for (int i=0; i<workLogs.size(); i++) {
+                            Worklog work = workLogs.get(i);
+                            log.println("registro apos update " + i + "/" + workLogs.size() + " " + work.getStartDate() + " " + work.getAuthorKey() + " " + comment(work.getComment()) + " id=" + work.getId());
+                        }
                     }
-                    // o tempo eh cumulativo
-                    int tempoRegistrar = tempo.getMinutos() - tempoJaRegistrado;
-                    tempoJaRegistrado += tempoRegistrar;
-                    log.println("Finalizando registro:" + tempoRegistrar + "m " + tempo.getInicio() + " " + registroIniciado.getId());
-                    WorklogNewEstimateInputParameters params = updateParams((MutableIssue) issue, tempoRegistrar + "m", 
-                        tempo.getInicio(), registroIniciado.getId());
-                    WorklogResult result = worklogService.validateUpdate(context, params);
-                    Worklog wl = worklogService.updateAndAutoAdjustRemainingEstimate(context, result, true);
-                    //worklogManager.create(com.atlassian.jira.user.ApplicationUsers.toDirectoryUser(user), wl, null, false);
 
+                    registrando = false;
                 }
                 log.close();
                 return;
@@ -367,3 +406,4 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 // 1.6 - 03/01 - correcao no registro de tempo com mais de uma ocorrencia(retirada do acumulo)
 // 1.7 - 06/01 - correcao no registro de tempo com mais de uma ocorrencia(id)
 // 1.8 - 09/01 - estava registrando os tempos duas vezes
+// 1.11- 27/01 - pegar o ultimo registro iniciado
