@@ -35,6 +35,7 @@ import com.atlassian.jira.bc.issue.worklog.WorklogInputParametersImpl;
 import com.atlassian.jira.bc.issue.worklog.WorklogNewEstimateInputParameters;
 import com.atlassian.jira.bc.JiraServiceContext;
 import com.atlassian.jira.bc.JiraServiceContextImpl;
+import com.atlassian.jira.util.ErrorCollection;
 
 @Component
 public class PluginAvanco implements InitializingBean, DisposableBean {
@@ -51,7 +52,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         PrintStream log = null;
         try {
             log = new PrintStream(new FileOutputStream("avanco.log", true));
-            log.println("====================PluginAvanco v1.11 " + new Date());
+            log.println("====================PluginAvanco v1.14 " + new Date());
             log.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -244,7 +245,21 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                     log.println("Iniciando registro: " + new Date());
                     WorklogNewEstimateInputParameters params = createParams((MutableIssue) issue, "1m", new Date());
                     WorklogResult result = worklogService.validateCreate(context, params);
+                    if (result != null) {
+                        log.println("isEditableCheckRequired=" + result.isEditableCheckRequired());
+                        Worklog created = result.getWorklog();
+                        if (created != null) {
+                            log.println("validateCreate: " + created.getStartDate() + " " + created.getAuthorKey() + " " + comment(created.getComment()) + " id=" + created.getId());
+                        }
+                    } else {
+                        log.println("result null");
+                        ErrorCollection errorCollection = context.getErrorCollection();
+                        log.println(errorCollection.toString());
+                    }
                     Worklog wl = worklogService.createAndAutoAdjustRemainingEstimate(context, result, true);
+                    if (wl != null) {
+                        log.println("adjust: " + wl.getStartDate() + " " + wl.getAuthorKey() + " " + comment(wl.getComment()) + " id=" + wl.getId());
+                    }
                     //worklogManager.create(com.atlassian.jira.user.ApplicationUsers.toDirectoryUser(user), wl, null, false);
                     log.println("Iniciando registro: " + new Date() + " id=" + wl.getId()
                                 + " start=" + wl.getStartDate());
@@ -311,7 +326,21 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                         if (t > 0) {
                             WorklogNewEstimateInputParameters params = createParams((MutableIssue) issue, "1m", new Date());
                             WorklogResult result = worklogService.validateCreate(context, params);
+                            if (result != null) {
+                                log.println("isEditableCheckRequired=" + result.isEditableCheckRequired());
+                                Worklog created = result.getWorklog();
+                                if (created != null) {
+                                    log.println("validateCreate: " + created.getStartDate() + " " + created.getAuthorKey() + " " + comment(created.getComment()) + " id=" + created.getId());
+                                }
+                            } else {
+                                log.println("result null");
+                                ErrorCollection errorCollection = context.getErrorCollection();
+                                log.println(errorCollection.toString());
+                            }
                             Worklog wl = worklogService.createAndAutoAdjustRemainingEstimate(context, result, true);
+                            if (wl != null) {
+                                log.println("adjust: " + wl.getStartDate() + " " + wl.getAuthorKey() + " " + comment(wl.getComment()) + " id=" + wl.getId());
+                            }
                             registroIniciado = wl;
                             log.println("Iniciando registro: " + tempo.getInicio() + " id=" + registroIniciado.getId()
                                 + " start=" + registroIniciado.getStartDate());
@@ -328,7 +357,21 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                         WorklogNewEstimateInputParameters params = updateParams((MutableIssue) issue, tempoRegistrar + "m", 
                             tempo.getInicio(), registroIniciado.getId());
                         WorklogResult result = worklogService.validateUpdate(context, params);
+                        if (result != null) {
+                            log.println("isEditableCheckRequired=" + result.isEditableCheckRequired());
+                            Worklog created = result.getWorklog();
+                            if (created != null) {
+                                log.println("validateUpdate: " + created.getStartDate() + " " + created.getAuthorKey() + " " + comment(created.getComment()) + " id=" + created.getId());
+                            }
+                        } else {
+                            log.println("result null");
+                            ErrorCollection errorCollection = context.getErrorCollection();
+                            log.println(errorCollection.toString());
+                        }
                         Worklog wl = worklogService.updateAndAutoAdjustRemainingEstimate(context, result, true);
+                        if (wl != null) {
+                            log.println("adjust: " + wl.getStartDate() + " " + wl.getAuthorKey() + " " + comment(wl.getComment()) + " id=" + wl.getId());
+                        }
                         //worklogManager.create(com.atlassian.jira.user.ApplicationUsers.toDirectoryUser(user), wl, null, false);
 
                     }
@@ -407,3 +450,5 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 // 1.7 - 06/01 - correcao no registro de tempo com mais de uma ocorrencia(id)
 // 1.8 - 09/01 - estava registrando os tempos duas vezes
 // 1.11- 27/01 - pegar o ultimo registro iniciado
+// 1.12- 01/02 - ajuste quando h2 < iniManha
+// 1.13- 13/02 - mais logs

@@ -67,6 +67,9 @@ public class CalculoTempo {
 		// ajusta horario de almoco
 		int almoco = 0;
 		String salvaH1 = h1;
+		if (h2.compareTo(iniManha) <= 0) {
+            return 0;
+        }
 		if (h1.compareTo(fimManha) > 0 && h1.compareTo(iniTarde) < 0) {
 			// comecou no horario do almoco
 			almoco = calculaTempo(h1, iniTarde);
@@ -148,32 +151,45 @@ public class CalculoTempo {
 				continue;
 			}
 
+            int m=0;
 			if (mesmoDia(cal, d1)) {
 				// dia inicial
 				if (mesmoDia(cal, d2)) {
 					// inicio e fim no mesmo dia
-					minutos += calculaTempo(h1, h2, iniManha, fimManha, iniTarde, fimTarde);
+					m = calculaTempo(h1, h2, iniManha, fimManha, iniTarde, fimTarde);
+					minutos += m;
                     log.println("            " + cal.getTime() + " " + h1 + " " + h2 + " " + minutos);
-                    tempos.add(new Tempo(cal, h1, h2, minutos));
+                    if (m > 0) {
+                        tempos.add(new Tempo(cal, h1, h2, minutos));
+                    }
 					break;
 				} else {
-					minutos += calculaTempo(h1, fimTarde, iniManha, fimManha, iniTarde, fimTarde);
+					m = calculaTempo(h1, fimTarde, iniManha, fimManha, iniTarde, fimTarde);
+					minutos += m;
                     log.println("            " + cal.getTime() + " " + h1 + " " + fimTarde + " " + minutos);
-                    tempos.add(new Tempo(cal, h1, fimTarde, minutos));
+                    if (m > 0) {
+                        tempos.add(new Tempo(cal, h1, fimTarde, minutos));
+                    }
 				}
 				
 			} else {
 				if (mesmoDia(cal, d2)) {
 					// dia final
-					minutos += calculaTempo(iniManha, h2, iniManha, fimManha, iniTarde, fimTarde);
+					m = calculaTempo(iniManha, h2, iniManha, fimManha, iniTarde, fimTarde);
+					minutos += m;
                     log.println("            " + cal.getTime() + " " + iniManha + " " + h2 + " " + minutos);
-                    tempos.add(new Tempo(cal, iniManha, h2, minutos));
+                    if (m > 0) {
+                        tempos.add(new Tempo(cal, iniManha, h2, minutos));
+                    }
 					break;
 				} else {
 					// dia intermediario
-					minutos += calculaTempo(iniManha, fimTarde, iniManha, fimManha, iniTarde, fimTarde);
+					m = calculaTempo(iniManha, fimTarde, iniManha, fimManha, iniTarde, fimTarde);
+					minutos += m;
                     log.println("            " + cal.getTime() + " " + iniManha + " " + fimTarde + " " + minutos);
-                    tempos.add(new Tempo(cal, iniManha, fimTarde, minutos));
+                    if (m > 0) {
+                        tempos.add(new Tempo(cal, iniManha, fimTarde, minutos));
+                    }
 				}
 			}
 			
