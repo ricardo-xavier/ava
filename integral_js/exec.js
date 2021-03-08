@@ -1,31 +1,27 @@
-const spawn = require('child_process').spawn;
+const spawn = require('child_process').spawn
+const input = require('./input.js')
 
 module.exports = {
 
-    exec_program: function exec_program(res, send_response) {
+    exec_program: function exec_program(res, send_response, progname, prms, fd) {
 
-        var output = "";
+        //console.log(fd)
 
-        //TODO programa
-        const cmd = '/home/ricardo/shell/cblapi ' + 'wscobol.int';
-        const child = spawn(cmd, [], {shell:true});
+        const cmd = 'cblapi ' + progname
+        const child = spawn(cmd, [], {shell:true})
 
-        //TODO passar parametros de entrada
-        child.stdin.write('/tmp\n');
-        child.stdin.write('/etc\n');
+        var json = JSON.parse(prms[0])
+        //console.log(json)
+        input.write_input(child, json)
 
-        //TODO receber saida de forma sincrona
+        var output = ""
         child.stdout.on('data', (data) => {
-            output += data.toString();
-        });
+            output += data.toString()
+        })
 
         child.on('exit', function (code, signal) {
-            const json = {
-                "code": code,
-                "output": output
-            };
-            send_response(res, json);
-        });
+            send_response(res, code, output)
+        })
     }
 
 }
