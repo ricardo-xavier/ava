@@ -157,39 +157,43 @@ public class CalculoTempo {
 				if (mesmoDia(cal, d2)) {
 					// inicio e fim no mesmo dia
 					m = calculaTempo(h1, h2, iniManha, fimManha, iniTarde, fimTarde);
+                    if (m == 0) {
+                        m = 1;
+                    }
 					minutos += m;
                     log.println("            " + cal.getTime() + " " + h1 + " " + h2 + " " + minutos);
-                    if (m > 0) {
-                        tempos.add(new Tempo(cal, h1, h2, minutos));
-                    }
+                    tempos.add(new Tempo(cal, h1, h2, minutos));
 					break;
 				} else {
 					m = calculaTempo(h1, fimTarde, iniManha, fimManha, iniTarde, fimTarde);
+                    if (m == 0) {
+                        m = 1;
+                    }
 					minutos += m;
                     log.println("            " + cal.getTime() + " " + h1 + " " + fimTarde + " " + minutos);
-                    if (m > 0) {
-                        tempos.add(new Tempo(cal, h1, fimTarde, minutos));
-                    }
+                    tempos.add(new Tempo(cal, h1, fimTarde, minutos));
 				}
 				
 			} else {
 				if (mesmoDia(cal, d2)) {
 					// dia final
 					m = calculaTempo(iniManha, h2, iniManha, fimManha, iniTarde, fimTarde);
+                    if (m == 0) {
+                        m = 1;
+                    }
 					minutos += m;
                     log.println("            " + cal.getTime() + " " + iniManha + " " + h2 + " " + minutos);
-                    if (m > 0) {
-                        tempos.add(new Tempo(cal, iniManha, h2, minutos));
-                    }
+                    tempos.add(new Tempo(cal, iniManha, h2, minutos));
 					break;
 				} else {
 					// dia intermediario
 					m = calculaTempo(iniManha, fimTarde, iniManha, fimManha, iniTarde, fimTarde);
+                    if (m == 0) {
+                        m = 1;
+                    }
 					minutos += m;
                     log.println("            " + cal.getTime() + " " + iniManha + " " + fimTarde + " " + minutos);
-                    if (m > 0) {
-                        tempos.add(new Tempo(cal, iniManha, fimTarde, minutos));
-                    }
+                    tempos.add(new Tempo(cal, iniManha, fimTarde, minutos));
 				}
 			}
 			

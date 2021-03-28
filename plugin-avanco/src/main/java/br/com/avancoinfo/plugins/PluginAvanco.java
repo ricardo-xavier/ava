@@ -52,7 +52,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         PrintStream log = null;
         try {
             log = new PrintStream(new FileOutputStream("avanco.log", true));
-            log.println("====================PluginAvanco v1.14 " + new Date());
+            log.println("====================PluginAvanco v1.16 " + new Date());
             log.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -202,6 +202,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
             }
 
             // verifica se tem algum registro iniciado pelo plugin na issue
+            int iniciados = 0;
             Worklog registroIniciado = null;
             List<Worklog> workLogs = worklogManager.getByIssue(issue);
             if (workLogs != null) {
@@ -213,7 +214,32 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                     if ((work.getComment() != null) && (work.getComment().contains(cfg.getMensagemInicio()))) {
                         registroIniciado = work;
                         log.println("registro iniciado: " + registroIniciado.getStartDate() + " " + registroIniciado.getAuthorKey());
+                        iniciados++;
                         //break;
+                    }
+                }
+            }
+
+            // finaliza os iniciados anteriores ao ultimo
+            if (iniciados > 1) {
+                for (Worklog work : workLogs) {
+                    if (work == registroIniciado) {
+                        break;
+                    }
+                    if ((work.getComment() != null) && work.getComment().contains(cfg.getMensagemInicio())) {
+                        log.println("Corrigindo registro " + work.getStartDate() + " " + work.getId());
+                        WorklogNewEstimateInputParameters params = updateParams((MutableIssue) issue, "1m", 
+                            work.getStartDate(), work.getId());
+                        WorklogResult result = worklogService.validateUpdate(context, params);
+                        if (result == null) {
+                            log.println("result null");
+                            ErrorCollection errorCollection = context.getErrorCollection();
+                            log.println(errorCollection.toString());
+                        }
+                        Worklog wl = worklogService.updateAndAutoAdjustRemainingEstimate(context, result, true);
+                        if (wl != null) {
+                            log.println("adjus: "  + comment(wl.getComment()) + " id=" + wl.getId());
+                        }
                     }
                 }
             }
@@ -246,7 +272,6 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                     WorklogNewEstimateInputParameters params = createParams((MutableIssue) issue, "1m", new Date());
                     WorklogResult result = worklogService.validateCreate(context, params);
                     if (result != null) {
-                        log.println("isEditableCheckRequired=" + result.isEditableCheckRequired());
                         Worklog created = result.getWorklog();
                         if (created != null) {
                             log.println("validateCreate: " + created.getStartDate() + " " + created.getAuthorKey() + " " + comment(created.getComment()) + " id=" + created.getId());
@@ -327,7 +352,6 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                             WorklogNewEstimateInputParameters params = createParams((MutableIssue) issue, "1m", new Date());
                             WorklogResult result = worklogService.validateCreate(context, params);
                             if (result != null) {
-                                log.println("isEditableCheckRequired=" + result.isEditableCheckRequired());
                                 Worklog created = result.getWorklog();
                                 if (created != null) {
                                     log.println("validateCreate: " + created.getStartDate() + " " + created.getAuthorKey() + " " + comment(created.getComment()) + " id=" + created.getId());
@@ -358,7 +382,6 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
                             tempo.getInicio(), registroIniciado.getId());
                         WorklogResult result = worklogService.validateUpdate(context, params);
                         if (result != null) {
-                            log.println("isEditableCheckRequired=" + result.isEditableCheckRequired());
                             Worklog created = result.getWorklog();
                             if (created != null) {
                                 log.println("validateUpdate: " + created.getStartDate() + " " + created.getAuthorKey() + " " + comment(created.getComment()) + " id=" + created.getId());
