@@ -39,7 +39,7 @@ public class CalculoTempo {
                 System.out.println("Iniciando registro: " + tempo.getInicio());
             }
 
-            if (tempo.getMinutos() == 0) {
+            if (tempo.getMinutos() <= 0) {
                 tempo.setMinutos(1);
             }
             // o tempo eh cumulativo
@@ -157,7 +157,7 @@ public class CalculoTempo {
 				if (mesmoDia(cal, d2)) {
 					// inicio e fim no mesmo dia
 					m = calculaTempo(h1, h2, iniManha, fimManha, iniTarde, fimTarde);
-                    if (m == 0) {
+                    if (m <= 0) {
                         m = 1;
                     }
 					minutos += m;
@@ -166,7 +166,7 @@ public class CalculoTempo {
 					break;
 				} else {
 					m = calculaTempo(h1, fimTarde, iniManha, fimManha, iniTarde, fimTarde);
-                    if (m == 0) {
+                    if (m <= 0) {
                         m = 1;
                     }
 					minutos += m;
@@ -178,7 +178,7 @@ public class CalculoTempo {
 				if (mesmoDia(cal, d2)) {
 					// dia final
 					m = calculaTempo(iniManha, h2, iniManha, fimManha, iniTarde, fimTarde);
-                    if (m == 0) {
+                    if (m <= 0) {
                         m = 1;
                     }
 					minutos += m;
@@ -188,7 +188,7 @@ public class CalculoTempo {
 				} else {
 					// dia intermediario
 					m = calculaTempo(iniManha, fimTarde, iniManha, fimManha, iniTarde, fimTarde);
-                    if (m == 0) {
+                    if (m <= 0) {
                         m = 1;
                     }
 					minutos += m;

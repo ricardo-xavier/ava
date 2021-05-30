@@ -2,3 +2,5 @@
 *.gz
 tmp/
 cors/
+ava_connector/
+ava_gateway/

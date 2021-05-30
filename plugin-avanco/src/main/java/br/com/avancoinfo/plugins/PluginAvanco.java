@@ -52,7 +52,7 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
         PrintStream log = null;
         try {
             log = new PrintStream(new FileOutputStream("avanco.log", true));
-            log.println("====================PluginAvanco v1.16 " + new Date());
+            log.println("====================PluginAvanco v1.17 " + new Date());
             log.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -475,3 +475,4 @@ public class PluginAvanco implements InitializingBean, DisposableBean {
 // 1.11- 27/01 - pegar o ultimo registro iniciado
 // 1.12- 01/02 - ajuste quando h2 < iniManha
 // 1.13- 13/02 - mais logs
+// 1.17- 29/05 - correcao tempo < 0 ao iniciar depois do horario
